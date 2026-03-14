@@ -1,6 +1,7 @@
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
+const mongoose = require('mongoose');
 
 const app = express();
 const server = http.createServer(app);
@@ -8,78 +9,111 @@ const io = new Server(server);
 
 // 儲存最近的聊天紀錄，並設定上限為 50 則
 const MAX_HISTORY = 50;
-// 將原本的單一陣列改成物件，用來儲存不同房間的歷史紀錄
-const rooms = {
-    '綜合閒聊': { messages: [], createdAt: Date.now() }
-}; // 預設提供一個大廳
+
+// 1. 連線到 MongoDB (環境變數 MONGODB_URI 是留給 Render 設定用的)
+const mongoURI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/baha';
+mongoose.connect(mongoURI)
+    .then(() => console.log('✅ MongoDB 資料庫連線成功'))
+    .catch(err => console.error('❌ MongoDB 連線失敗:', err));
+
+// 2. 建立資料庫結構 (Schema) 與模型 (Model)
+const roomSchema = new mongoose.Schema({
+    name: { type: String, unique: true },
+    createdAt: { type: Number, default: Date.now }
+});
+const Room = mongoose.model('Room', roomSchema);
+
+const messageSchema = new mongoose.Schema({
+    roomName: String,
+    id: String,
+    text: String,
+    timestamp: { type: Number, default: Date.now }
+});
+const Message = mongoose.model('Message', messageSchema);
+
+// 3. 確保預設的「綜合閒聊」大廳永遠存在
+Room.findOne({ name: '綜合閒聊' }).then(room => {
+    if (!room) {
+        Room.create({ name: '綜合閒聊', createdAt: Date.now() });
+    }
+});
 
 // 設定靜態檔案資料夾，讓 Express 可以提供 HTML, CSS, JS 檔案
 app.use(express.static('public'));
 
 // 取得並排序房間列表的輔助函式
-const getSortedRoomList = () => {
-    const roomList = Object.keys(rooms).map(name => {
-        const roomData = io.sockets.adapter.rooms.get(name);
+const getSortedRoomList = async () => {
+    // 從資料庫撈取所有房間，並依建立時間反向排序
+    const dbRooms = await Room.find().sort({ createdAt: -1 });
+    const roomList = dbRooms.map(room => {
+        const roomData = io.sockets.adapter.rooms.get(room.name);
         const userCount = roomData ? roomData.size : 0;
         return {
-            name,
-            createdAt: rooms[name].createdAt,
+            name: room.name,
+            createdAt: room.createdAt,
             userCount
         };
     });
-    roomList.sort((a, b) => b.createdAt - a.createdAt); // 最新的在前面
     return roomList;
 };
 
 // 監聽使用者的 Socket.io 連線
-io.on('connection', (socket) => {
+io.on('connection', async (socket) => {
     // 取 socket.id 的前 6 個字元作為匿名使用者的隨機 ID
     const userId = socket.id.substring(0, 6);
     console.log(`匿名使用者 ${userId} 已連線`);
 
     // 當新使用者連線時，傳送目前所有可用房間列表
-    socket.emit('room list', getSortedRoomList());
+    socket.emit('room list', await getSortedRoomList());
 
     // 監聽建立新話題房間
-    socket.on('create room', (roomName) => {
-        if (!rooms[roomName]) {
-            rooms[roomName] = { messages: [], createdAt: Date.now() };
+    socket.on('create room', async (roomName) => {
+        const existingRoom = await Room.findOne({ name: roomName });
+        if (!existingRoom) {
+            await Room.create({ name: roomName, createdAt: Date.now() });
             // 廣播給所有人更新房間列表
-            io.emit('room list', getSortedRoomList());
+            io.emit('room list', await getSortedRoomList());
         }
     });
 
     // 監聽加入房間
-    socket.on('join room', (roomName) => {
+    socket.on('join room', async (roomName) => {
         // 離開其他的話題房間 (避免收到其他房間的訊息)
         socket.rooms.forEach(room => {
             if (room !== socket.id) socket.leave(room);
         });
         socket.join(roomName);
-        // 傳送該房間的歷史訊息
-        socket.emit('chat history', rooms[roomName] ? rooms[roomName].messages : []);
+        // 從資料庫讀取該房間的歷史訊息 (最多撈 50 筆，按時間正序排)
+        const messages = await Message.find({ roomName }).sort({ timestamp: 1 }).limit(MAX_HISTORY);
+        socket.emit('chat history', messages);
         // 廣播給所有人更新房間列表 (因為人數變動)
-        io.emit('room list', getSortedRoomList());
+        io.emit('room list', await getSortedRoomList());
     });
 
     // 監聽離開房間 (返回大廳時觸發)
-    socket.on('leave room', (roomName) => {
+    socket.on('leave room', async (roomName) => {
         socket.leave(roomName);
         // 廣播給所有人更新房間列表
-        io.emit('room list', getSortedRoomList());
+        io.emit('room list', await getSortedRoomList());
     });
 
     // 監聽來自前端的 'chat message' 事件
-    socket.on('chat message', (data) => {
+    socket.on('chat message', async (data) => {
         const { room, text } = data;
         const messageData = { id: userId, text: text, timestamp: Date.now() };
 
-        if (rooms[room] && rooms[room].messages) {
-            // 將新訊息存入該房間的歷史紀錄
-            rooms[room].messages.push(messageData);
-            if (rooms[room].messages.length > MAX_HISTORY) {
-                rooms[room].messages.shift();
+        const existingRoom = await Room.findOne({ name: room });
+        if (existingRoom) {
+            // 1. 將新訊息存入資料庫
+            await Message.create({ roomName: room, ...messageData });
+            
+            // 2. 避免無上限增長：如果超過 50 則，刪除最舊的訊息
+            const msgCount = await Message.countDocuments({ roomName: room });
+            if (msgCount > MAX_HISTORY) {
+                const oldestMsg = await Message.findOne({ roomName: room }).sort({ timestamp: 1 });
+                if (oldestMsg) await Message.deleteOne({ _id: oldestMsg._id });
             }
+
             // 只將訊息廣播給在同一個房間的使用者
             io.to(room).emit('chat message', messageData);
         }
@@ -90,7 +124,7 @@ io.on('connection', (socket) => {
         console.log(`匿名使用者 ${userId} 已離線`);
         // 使用者斷線後，房間人數會自動更新，我們需要廣播最新的列表
         // 使用 setTimeout 確保 adapter 的房間資訊已更新
-        setTimeout(() => io.emit('room list', getSortedRoomList()), 100);
+        setTimeout(async () => io.emit('room list', await getSortedRoomList()), 100);
     });
 });
 
