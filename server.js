@@ -130,6 +130,7 @@ io.on('connection', async (socket) => {
 
 // 啟動伺服器，監聽 3000 埠
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-    console.log(`Baha 匿名論壇伺服器已啟動： http://localhost:${PORT}`);
+// 加入 '0.0.0.0' 確保雲端平台可以正確路由流量
+server.listen(PORT, '0.0.0.0', () => {
+    console.log(`Baha 匿名論壇伺服器已啟動，監聽 Port：${PORT}`);
 });

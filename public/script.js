@@ -18,6 +18,20 @@ let currentRoom = ''; // 紀錄目前所在的房間
 let allRooms = []; // 儲存從伺服器收到的所有房間列表
 
 /**
+ * 根據字串(ID)計算出專屬的 HSL 顏色
+ * @param {string} str 
+ * @returns {string} hsl 顏色代碼
+ */
+function stringToColor(str) {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+        hash = str.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const hue = Math.abs(hash) % 360; // 將數字轉換為 0~359 的色相角度
+    return `hsl(${hue}, 70%, 45%)`; // 飽和度 70%, 亮度 45% 確保字體在淺色背景上夠清晰
+}
+
+/**
  * 將一則訊息新增到畫面上
  * @param {object} data - 包含 id, text 和 timestamp 的訊息物件
  */
@@ -32,6 +46,7 @@ function addMessage(data) {
         const idSpan = document.createElement('span');
         idSpan.className = 'user-id';
         idSpan.textContent = `[${data.id}] `;
+        idSpan.style.color = stringToColor(data.id); // 依照 ID 設定動態專屬顏色
         item.appendChild(idSpan);
     }
 
