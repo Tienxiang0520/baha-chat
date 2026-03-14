@@ -2,6 +2,7 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const mongoose = require('mongoose');
+const nodemailer = require('nodemailer');
 
 const app = express();
 const server = http.createServer(app);
@@ -9,6 +10,16 @@ const io = new Server(server);
 
 // 儲存最近的聊天紀錄，並設定上限為 50 則
 const MAX_HISTORY = 50;
+
+// 設定 Email 發送器 (需在 Render 設定環境變數 EMAIL_USER 和 EMAIL_PASS)
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+    }
+});
+let hasSentUpgradeEmail = false; // 避免人數在 189~190 之間浮動時狂發 Email
 
 // 1. 連線到 MongoDB (環境變數 MONGODB_URI 是留給 Render 設定用的)
 const mongoURI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/baha';
@@ -62,6 +73,23 @@ io.on('connection', async (socket) => {
     // 取 socket.id 的前 6 個字元作為匿名使用者的隨機 ID
     const userId = socket.id.substring(0, 6);
     console.log(`匿名使用者 ${userId} 已連線`);
+
+    // 檢查總線上人數並發送提醒
+    const totalUsers = io.engine.clientsCount;
+    if (totalUsers >= 190 && !hasSentUpgradeEmail) {
+        hasSentUpgradeEmail = true;
+        try {
+            await transporter.sendMail({
+                from: `"Baha 系統通知" <${process.env.EMAIL_USER}>`,
+                to: 'pudding050@gmail.com',
+                subject: '🚨【Baha】線上人數已達 190 人，請注意伺服器負載！',
+                text: `目前網站線上人數已達 ${totalUsers} 人。\n\n這是一個系統自動提醒，建議您登入 Render 檢查伺服器狀態，或考慮升級伺服器方案以應付更高的流量。`
+            });
+            console.log('✅ 已成功發送人數達標 Email 提醒！');
+        } catch (error) {
+            console.error('❌ Email 發送失敗:', error);
+        }
+    }
 
     // 當新使用者連線時，傳送目前所有可用房間列表
     socket.emit('room list', await getSortedRoomList());
@@ -125,6 +153,12 @@ io.on('connection', async (socket) => {
         // 使用者斷線後，房間人數會自動更新，我們需要廣播最新的列表
         // 使用 setTimeout 確保 adapter 的房間資訊已更新
         setTimeout(async () => io.emit('room list', await getSortedRoomList()), 100);
+
+        // 當人數降回 150 人以下時，重置 Email 發送狀態，以便下次再度達標時能重新提醒
+        const currentTotalUsers = io.engine.clientsCount;
+        if (currentTotalUsers < 150) {
+            hasSentUpgradeEmail = false;
+        }
     });
 });
 
