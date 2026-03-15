@@ -10,22 +10,22 @@
     <!-- 載入與斷線等候畫面 -->
     <div id="loading-overlay">
         <div class="spinner"></div>
-        <h2>連線中...</h2>
-        <p>若伺服器正在從休眠中喚醒，可能需要等待約 30~50 秒，請稍候 ☕</p>
+        <h2 data-i18n="connecting">連線中...</h2>
+        <p data-i18n="waking_up">若伺服器正在從休眠中喚醒，可能需要等待約 30~50 秒，請稍候 ☕</p>
     </div>
 
     <!-- 大廳畫面：用來顯示話題列表與建立話題 -->
     <div id="lobby-view" class="chat-container">
         <header>
-            <h1>Baha 話題大廳</h1>
+            <h1 data-i18n="lobby_title">Baha 話題大廳</h1>
         </header>
         
         <div id="room-form-container">
-            <input id="room-input" autocomplete="off" placeholder="發起新話題..." required />
-            <button id="create-room-btn">建立</button>
+            <input id="room-input" autocomplete="off" placeholder="發起新話題..." data-i18n-placeholder="new_topic_placeholder" required />
+            <button id="create-room-btn" data-i18n="create">建立</button>
         </div>
         <div id="search-container">
-            <input id="search-input" autocomplete="off" placeholder="🔍 搜尋話題..." />
+            <input id="search-input" autocomplete="off" placeholder="🔍 搜尋話題..." data-i18n-placeholder="search_placeholder" />
         </div>
         <ul id="room-list"></ul>
     </div>
@@ -33,16 +33,16 @@
     <!-- 聊天室畫面：進入特定話題後顯示，預設隱藏 -->
     <div id="chat-view" class="chat-container hidden">
         <header class="chat-header">
-            <button id="back-btn">⬅ 返回大廳</button>
-            <h1 id="room-title">話題標題</h1>
+            <button id="back-btn" data-i18n="back_to_lobby">⬅ 返回大廳</button>
+            <h1 id="room-title" data-i18n="room_title_default">話題標題</h1>
         </header>
         
         <div id="danmaku-container"></div>
         <ul id="messages"></ul>
         
         <form id="form" action="">
-            <input id="input" autocomplete="off" placeholder="輸入匿名訊息..." required />
-            <button type="submit">發送</button>
+            <input id="input" autocomplete="off" placeholder="輸入匿名訊息..." data-i18n-placeholder="chat_placeholder" required />
+            <button type="submit" data-i18n="send">發送</button>
         </form>
     </div>
 

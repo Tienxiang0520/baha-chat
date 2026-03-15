@@ -21,6 +21,147 @@ let allRooms = []; // 儲存從伺服器收到的所有房間列表
 let messageTimestamps = []; // 紀錄訊息抵達的時間以計算頻率
 const DANMAKU_THRESHOLD = 10; // 觸發彈幕模式的門檻 (條/秒)
 
+// 多國語系翻譯表 (i18n)
+const translations = {
+    'zh-TW': {
+        connecting: '連線中...',
+        waking_up: '若伺服器正在從休眠中喚醒，可能需要等待約 30~50 秒，請稍候 ☕',
+        lobby_title: 'Baha 話題大廳',
+        new_topic_placeholder: '發起新話題...',
+        create: '建立',
+        search_placeholder: '🔍 搜尋話題...',
+        back_to_lobby: '⬅ 返回大廳',
+        room_title_default: '話題標題',
+        chat_placeholder: '輸入匿名訊息...',
+        send: '發送',
+        time_years_ago: ' 年前',
+        time_months_ago: ' 個月前',
+        time_days_ago: ' 天前',
+        time_hours_ago: ' 小時前',
+        time_minutes_ago: ' 分鐘前',
+        time_just_now: '剛剛'
+    },
+    'zh-CN': {
+        connecting: '连接中...',
+        waking_up: '若服务器正在从休眠中唤醒，可能需要等待约 30~50 秒，请稍候 ☕',
+        lobby_title: 'Baha 话题大厅',
+        new_topic_placeholder: '发起新话题...',
+        create: '创建',
+        search_placeholder: '🔍 搜索话题...',
+        back_to_lobby: '⬅ 返回大厅',
+        room_title_default: '话题标题',
+        chat_placeholder: '输入匿名消息...',
+        send: '发送',
+        time_years_ago: ' 年前',
+        time_months_ago: ' 个月前',
+        time_days_ago: ' 天前',
+        time_hours_ago: ' 小时前',
+        time_minutes_ago: ' 分钟前',
+        time_just_now: '刚刚'
+    },
+    'en': {
+        connecting: 'Connecting...',
+        waking_up: 'If the server is waking up, it may take 30~50 seconds. Please wait ☕',
+        lobby_title: 'Baha Lobby',
+        new_topic_placeholder: 'Start a new topic...',
+        create: 'Create',
+        search_placeholder: '🔍 Search topics...',
+        back_to_lobby: '⬅ Back to Lobby',
+        room_title_default: 'Topic Title',
+        chat_placeholder: 'Enter anonymous message...',
+        send: 'Send',
+        time_years_ago: ' years ago',
+        time_months_ago: ' months ago',
+        time_days_ago: ' days ago',
+        time_hours_ago: ' hours ago',
+        time_minutes_ago: ' mins ago',
+        time_just_now: 'Just now'
+    },
+    'ja': {
+        connecting: '接続中...',
+        waking_up: 'サーバーが復帰中の場合、30〜50秒かかることがあります。少々お待ちください ☕',
+        lobby_title: 'Baha ロビー',
+        new_topic_placeholder: '新しいトピックを作成...',
+        create: '作成',
+        search_placeholder: '🔍 トピックを検索...',
+        back_to_lobby: '⬅ ロビーに戻る',
+        room_title_default: 'トピックのタイトル',
+        chat_placeholder: '匿名のメッセージを入力...',
+        send: '送信',
+        time_years_ago: ' 年前',
+        time_months_ago: ' ヶ月前',
+        time_days_ago: ' 日前',
+        time_hours_ago: ' 時間前',
+        time_minutes_ago: ' 分前',
+        time_just_now: 'たった今'
+    },
+    'ko': {
+        connecting: '연결 중...',
+        waking_up: '서버가 절전 모드에서 해제되는 중이면 30~50초 정도 걸릴 수 있습니다. 잠시만 기다려주세요 ☕',
+        lobby_title: 'Baha 로비',
+        new_topic_placeholder: '새 주제 시작...',
+        create: '만들기',
+        search_placeholder: '🔍 주제 검색...',
+        back_to_lobby: '⬅ 로비로 돌아가기',
+        room_title_default: '주제 제목',
+        chat_placeholder: '익명 메시지 입력...',
+        send: '전송',
+        time_years_ago: '년 전',
+        time_months_ago: '개월 전',
+        time_days_ago: '일 전',
+        time_hours_ago: '시간 전',
+        time_minutes_ago: '분 전',
+        time_just_now: '방금 전'
+    },
+    'vi': {
+        connecting: 'Đang kết nối...',
+        waking_up: 'Nếu máy chủ đang thức dậy, có thể mất 30~50 giây. Vui lòng đợi ☕',
+        lobby_title: 'Sảnh Baha',
+        new_topic_placeholder: 'Bắt đầu chủ đề mới...',
+        create: 'Tạo',
+        search_placeholder: '🔍 Tìm kiếm chủ đề...',
+        back_to_lobby: '⬅ Quay lại sảnh',
+        room_title_default: 'Tiêu đề chủ đề',
+        chat_placeholder: 'Nhập tin nhắn ẩn danh...',
+        send: 'Gửi',
+        time_years_ago: ' năm trước',
+        time_months_ago: ' tháng trước',
+        time_days_ago: ' ngày trước',
+        time_hours_ago: ' giờ trước',
+        time_minutes_ago: ' phút trước',
+        time_just_now: 'Vừa xong'
+    }
+};
+
+// 自動偵測瀏覽器語言
+function getBrowserLanguage() {
+    const lang = navigator.language || navigator.userLanguage;
+    if (lang.startsWith('zh-CN') || lang === 'zh-SG') return 'zh-CN';
+    if (lang.startsWith('zh')) return 'zh-TW';
+    if (lang.startsWith('ja')) return 'ja';
+    if (lang.startsWith('ko')) return 'ko';
+    if (lang.startsWith('en')) return 'en';
+    if (lang.startsWith('vi')) return 'vi';
+    return 'zh-TW'; // 預設使用繁體中文
+}
+
+const currentLang = getBrowserLanguage();
+const t = translations[currentLang] || translations['zh-TW'];
+
+// 替換畫面上所有標記有 data-i18n 的文字
+function applyTranslations() {
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (t[key]) el.textContent = t[key];
+    });
+    document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+        const key = el.getAttribute('data-i18n-placeholder');
+        if (t[key]) el.placeholder = t[key];
+    });
+    document.title = t.lobby_title;
+}
+applyTranslations();
+
 /**
  * 根據字串(ID)計算出專屬的 HSL 顏色
  * @param {string} str 
@@ -104,16 +245,16 @@ function formatTimeAgo(timestamp) {
     const seconds = Math.floor((now - new Date(timestamp)) / 1000);
 
     let interval = seconds / 31536000; // 年
-    if (interval > 1) return Math.floor(interval) + " 年前";
+    if (interval > 1) return Math.floor(interval) + t.time_years_ago;
     interval = seconds / 2592000; // 月
-    if (interval > 1) return Math.floor(interval) + " 個月前";
+    if (interval > 1) return Math.floor(interval) + t.time_months_ago;
     interval = seconds / 86400; // 天
-    if (interval > 1) return Math.floor(interval) + " 天前";
+    if (interval > 1) return Math.floor(interval) + t.time_days_ago;
     interval = seconds / 3600; // 小時
-    if (interval > 1) return Math.floor(interval) + " 小時前";
+    if (interval > 1) return Math.floor(interval) + t.time_hours_ago;
     interval = seconds / 60; // 分鐘
-    if (interval > 1) return Math.floor(interval) + " 分鐘前";
-    return "剛剛";
+    if (interval > 1) return Math.floor(interval) + t.time_minutes_ago;
+    return t.time_just_now;
 }
 
 // 建立新話題房間
