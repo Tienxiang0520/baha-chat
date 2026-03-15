@@ -11,6 +11,13 @@ const searchInput = document.getElementById('search-input');
 const backBtn = document.getElementById('back-btn');
 const roomTitle = document.getElementById('room-title');
 const danmakuContainer = document.getElementById('danmaku-container');
+const contextMenu = document.getElementById('message-context-menu');
+const menuCopy = document.getElementById('menu-copy');
+const menuReply = document.getElementById('menu-reply');
+const replyPreview = document.getElementById('reply-preview');
+const replyPreviewUser = document.getElementById('reply-preview-user');
+const replyPreviewText = document.getElementById('reply-preview-text');
+const cancelReplyBtn = document.getElementById('cancel-reply-btn');
 
 const form = document.getElementById('form');
 const input = document.getElementById('input');
@@ -21,6 +28,57 @@ let allRooms = []; // 儲存從伺服器收到的所有房間列表
 let messageTimestamps = []; // 紀錄訊息抵達的時間以計算頻率
 const DANMAKU_THRESHOLD = 10; // 觸發彈幕模式的門檻 (條/秒)
 let isMarkdownEnabled = true; // 紀錄是否啟用 Markdown
+let replyingTo = null; // 紀錄目前正在回覆的訊息資料
+
+// ===== 互動選單相關狀態與事件 =====
+let selectedMessageText = '';
+let selectedMessageId = '';
+let selectedMessageElement = null;
+
+function closeContextMenu() {
+    contextMenu.classList.add('hidden');
+    if (selectedMessageElement) {
+        selectedMessageElement.classList.remove('selected-message');
+        selectedMessageElement = null;
+    }
+}
+
+// 點擊畫面任意處關閉選單
+document.addEventListener('click', (e) => {
+    if (e.target.closest('#message-context-menu')) return; // 點擊選單內部不關閉
+    closeContextMenu();
+});
+
+// 執行複製文字
+menuCopy.addEventListener('click', () => {
+    if (selectedMessageText) {
+        navigator.clipboard.writeText(selectedMessageText).then(() => {
+            addSystemMessage(t.system_copied);
+        }).catch(err => {
+            console.error('複製失敗', err);
+        });
+    }
+    closeContextMenu();
+});
+
+// 執行回覆
+menuReply.addEventListener('click', () => {
+    if (selectedMessageText && selectedMessageId) {
+        replyingTo = { id: selectedMessageId, text: selectedMessageText };
+        replyPreviewUser.textContent = `[${selectedMessageId}]`;
+        replyPreviewUser.style.color = stringToColor(selectedMessageId);
+        replyPreviewText.textContent = selectedMessageText;
+        replyPreview.classList.remove('hidden');
+        input.focus(); // 自動聚焦到輸入框方便直接打字
+    }
+    closeContextMenu();
+});
+
+cancelReplyBtn.addEventListener('click', () => {
+    replyingTo = null;
+    replyPreview.classList.add('hidden');
+});
+// ===============================
 
 // 自動偵測瀏覽器語言
 function getBrowserLanguage() {
@@ -108,8 +166,22 @@ function parseMarkdown(text) {
         return `__CODE_BLOCK_${codeBlocks.length - 1}__`;
     });
 
-    // 3. 處理自動連結 (Auto-linking)
-    parsed = parsed.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer" class="chat-link">$1</a>');
+    // 3. 處理自動連結與圖片/影片預覽 (Auto-linking & Media Preview)
+    parsed = parsed.replace(/(https?:\/\/[^\s]+)/g, (match, url) => {
+        // 判斷是否為 YouTube 網址，擷取 11 碼的影片 ID
+        const ytMatch = url.match(/(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/i);
+        if (ytMatch && ytMatch[1]) {
+            const videoId = ytMatch[1];
+            return `<iframe class="chat-youtube-preview" src="https://www.youtube.com/embed/${videoId}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+        }
+
+        // 判斷網址是否為常見的圖片格式結尾 (支援網址後方帶有參數 ?xxx)
+        if (/\.(png|jpe?g|gif|webp)(\?.*)?$/i.test(url)) {
+            return `<a href="${url}" target="_blank" rel="noopener noreferrer"><img src="${url}" class="chat-image-preview" alt="圖片預覽" loading="lazy" /></a>`;
+        }
+        // 一般網址
+        return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="chat-link">${url}</a>`;
+    });
 
     // 4. 處理其他格式
     parsed = parsed.replace(/\|\|(.*?)\|\|/g, '<span class="spoiler" onclick="this.classList.toggle(\'revealed\')">$1</span>'); // 防雷線
@@ -139,8 +211,18 @@ function addMessage(data, skipScroll = false) {
 
     if (isMyMessage) {
         item.classList.add('my-message');
-    } else {
-        // 只為其他人的訊息顯示 ID
+    }
+
+    // 1. 如果有回覆資料，先渲染回覆引言區塊
+    if (data.replyTo) {
+        const replyDiv = document.createElement('div');
+        replyDiv.className = 'replied-message';
+        replyDiv.textContent = `${t.replied_message_prefix} [${data.replyTo.id}]: ${data.replyTo.text}`;
+        item.appendChild(replyDiv);
+    }
+
+    // 2. 如果不是自己的訊息，顯示發送者 ID
+    if (!isMyMessage) {
         const idSpan = document.createElement('span');
         idSpan.className = 'user-id';
         idSpan.textContent = `[${data.id}] `;
@@ -148,13 +230,14 @@ function addMessage(data, skipScroll = false) {
         item.appendChild(idSpan);
     }
 
+    // 3. 訊息本文
     const textSpan = document.createElement('span');
     // 根據該則訊息發送時的設定來決定是否渲染 (相容舊訊息，預設為 true)
     const applyMarkdown = data.useMarkdown !== false;
     textSpan.innerHTML = applyMarkdown ? parseMarkdown(data.text) : escapeHTML(data.text);
     item.appendChild(textSpan);
 
-    // 如果訊息有時間戳記，則格式化並顯示
+    // 4. 如果訊息有時間戳記，則格式化並顯示
     if (data.timestamp) {
         const timeSpan = document.createElement('span');
         timeSpan.className = 'message-time';
@@ -164,6 +247,41 @@ function addMessage(data, skipScroll = false) {
         timeSpan.textContent = ` ${hours}:${minutes}`;
         item.appendChild(timeSpan);
     }
+
+    // ===== 綁定右鍵與長按事件 =====
+    let pressTimer;
+    const showMenu = (x, y) => {
+        closeContextMenu(); // 顯示前先重置舊的
+        selectedMessageText = data.text; // 儲存原始文字 (包含 Markdown 標記)
+        selectedMessageId = data.id; // 儲存 ID 供回覆功能使用
+        selectedMessageElement = item;
+        item.classList.add('selected-message');
+
+        contextMenu.classList.remove('hidden');
+        // 防止選單超出畫面邊緣
+        const menuWidth = contextMenu.offsetWidth;
+        const menuHeight = contextMenu.offsetHeight;
+        const menuX = (x + menuWidth > window.innerWidth) ? window.innerWidth - menuWidth - 10 : x;
+        const menuY = (y + menuHeight > window.innerHeight) ? window.innerHeight - menuHeight - 10 : y;
+
+        contextMenu.style.left = `${menuX}px`;
+        contextMenu.style.top = `${menuY}px`;
+    };
+
+    // 電腦版：右鍵點擊
+    item.addEventListener('contextmenu', (e) => {
+        e.preventDefault(); // 阻止瀏覽器預設右鍵選單
+        showMenu(e.clientX, e.clientY);
+    });
+
+    // 手機版：長按 (超過 500 毫秒觸發)
+    item.addEventListener('touchstart', (e) => {
+        pressTimer = setTimeout(() => {
+            showMenu(e.touches[0].clientX, e.touches[0].clientY);
+        }, 500);
+    });
+    item.addEventListener('touchend', () => clearTimeout(pressTimer));
+    item.addEventListener('touchmove', () => clearTimeout(pressTimer));
 
     messages.appendChild(item);
     
@@ -237,6 +355,8 @@ backBtn.addEventListener('click', () => {
     chatView.classList.add('hidden');
     currentRoom = '';
     messages.innerHTML = ''; // 清空聊天畫面以防下次進入時疊加
+    replyingTo = null; // 重置回覆狀態
+    replyPreview.classList.add('hidden');
 });
 
 /**
@@ -302,7 +422,7 @@ form.addEventListener('submit', function(e) {
     // 檢查是否為 Markdown 切換指令
     if (text === '/md') {
         isMarkdownEnabled = !isMarkdownEnabled;
-        addSystemMessage(`⚙️ 系統提示：您發送的訊息已${isMarkdownEnabled ? '開啟' : '關閉'} Markdown 格式化`);
+        addSystemMessage(isMarkdownEnabled ? t.system_md_on : t.system_md_off);
         input.value = ''; // 清空輸入框
         input.style.height = 'auto'; // 重置輸入框高度
         return; // 中斷執行，不把指令發送給伺服器
@@ -310,9 +430,11 @@ form.addEventListener('submit', function(e) {
 
     if (text && currentRoom) {
         // 將輸入的訊息發送給伺服器，並附帶目前房間名稱與格式化設定
-        socket.emit('chat message', { room: currentRoom, text: text, useMarkdown: isMarkdownEnabled });
+        socket.emit('chat message', { room: currentRoom, text: text, useMarkdown: isMarkdownEnabled, replyTo: replyingTo });
         input.value = ''; // 清空輸入框
         input.style.height = 'auto'; // 送出後重置輸入框高度
+        replyingTo = null; // 送出後清空回覆狀態
+        replyPreview.classList.add('hidden');
     }
 });
 

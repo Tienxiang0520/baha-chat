@@ -40,10 +40,24 @@
         <div id="danmaku-container"></div>
         <ul id="messages"></ul>
         
+        <!-- 準備回覆的預覽區塊 (預設隱藏) -->
+        <div id="reply-preview" class="hidden">
+            <div class="reply-content">
+                <span data-i18n="reply_to_prefix">↩️ 回覆</span> <span id="reply-preview-user"></span>：<span id="reply-preview-text"></span>
+            </div>
+            <button id="cancel-reply-btn" type="button">✖</button>
+        </div>
+
         <form id="form" action="">
             <textarea id="input" autocomplete="off" placeholder="輸入匿名訊息..." data-i18n-placeholder="chat_placeholder" required></textarea>
             <button type="submit" data-i18n="send">發送</button>
         </form>
+    </div>
+
+    <!-- 訊息右鍵/長按互動選單 -->
+    <div id="message-context-menu" class="hidden">
+        <div class="menu-item" id="menu-reply" data-i18n="menu_reply">↩️ 回覆訊息</div>
+        <div class="menu-item" id="menu-copy" data-i18n="menu_copy">📋 複製文字</div>
     </div>
 
     <!-- 引入 Socket.io 客戶端套件 -->

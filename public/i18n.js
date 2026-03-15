@@ -16,7 +16,14 @@ const translations = {
         time_days_ago: ' 天前',
         time_hours_ago: ' 小時前',
         time_minutes_ago: ' 分鐘前',
-        time_just_now: '剛剛'
+        time_just_now: '剛剛',
+        menu_reply: '↩️ 回覆訊息',
+        menu_copy: '📋 複製文字',
+        reply_to_prefix: '↩️ 回覆',
+        replied_message_prefix: '回覆',
+        system_copied: '⚙️ 系統提示：已複製訊息文字',
+        system_md_on: '⚙️ 系統提示：您發送的訊息已開啟 Markdown 格式化',
+        system_md_off: '⚙️ 系統提示：您發送的訊息已關閉 Markdown 格式化'
     },
     'zh-CN': {
         connecting: '连接中...',
@@ -34,7 +41,14 @@ const translations = {
         time_days_ago: ' 天前',
         time_hours_ago: ' 小时前',
         time_minutes_ago: ' 分钟前',
-        time_just_now: '刚刚'
+        time_just_now: '刚刚',
+        menu_reply: '↩️ 回复消息',
+        menu_copy: '📋 复制文字',
+        reply_to_prefix: '↩️ 回复',
+        replied_message_prefix: '回复',
+        system_copied: '⚙️ 系统提示：已复制消息文字',
+        system_md_on: '⚙️ 系统提示：您发送的消息已开启 Markdown 格式化',
+        system_md_off: '⚙️ 系统提示：您发送的消息已关闭 Markdown 格式化'
     },
     'en': {
         connecting: 'Connecting...',
@@ -52,7 +66,14 @@ const translations = {
         time_days_ago: ' days ago',
         time_hours_ago: ' hours ago',
         time_minutes_ago: ' mins ago',
-        time_just_now: 'Just now'
+        time_just_now: 'Just now',
+        menu_reply: '↩️ Reply',
+        menu_copy: '📋 Copy Text',
+        reply_to_prefix: '↩️ Replying to',
+        replied_message_prefix: 'Replying to',
+        system_copied: '⚙️ System: Message text copied',
+        system_md_on: '⚙️ System: Markdown formatting enabled',
+        system_md_off: '⚙️ System: Markdown formatting disabled'
     },
     'ja': {
         connecting: '接続中...',
@@ -70,7 +91,14 @@ const translations = {
         time_days_ago: ' 日前',
         time_hours_ago: ' 時間前',
         time_minutes_ago: ' 分前',
-        time_just_now: 'たった今'
+        time_just_now: 'たった今',
+        menu_reply: '↩️ 返信',
+        menu_copy: '📋 コピー',
+        reply_to_prefix: '↩️ 返信先',
+        replied_message_prefix: '返信先',
+        system_copied: '⚙️ システム: コピーしました',
+        system_md_on: '⚙️ システム: Markdownをオンにしました',
+        system_md_off: '⚙️ システム: Markdownをオフにしました'
     },
     'ko': {
         connecting: '연결 중...',
@@ -88,7 +116,14 @@ const translations = {
         time_days_ago: '일 전',
         time_hours_ago: '시간 전',
         time_minutes_ago: '분 전',
-        time_just_now: '방금 전'
+        time_just_now: '방금 전',
+        menu_reply: '↩️ 답장',
+        menu_copy: '📋 텍스트 복사',
+        reply_to_prefix: '↩️ 답장 대상',
+        replied_message_prefix: '답장 대상',
+        system_copied: '⚙️ 시스템: 메시지가 복사되었습니다',
+        system_md_on: '⚙️ 시스템: 마크다운 서식이 켜졌습니다',
+        system_md_off: '⚙️ 시스템: 마크다운 서식이 꺼졌습니다'
     },
     'vi': {
         connecting: 'Đang kết nối...',
@@ -106,6 +141,13 @@ const translations = {
         time_days_ago: ' ngày trước',
         time_hours_ago: ' giờ trước',
         time_minutes_ago: ' phút trước',
-        time_just_now: 'Vừa xong'
+        time_just_now: 'Vừa xong',
+        menu_reply: '↩️ Trả lời',
+        menu_copy: '📋 Sao chép',
+        reply_to_prefix: '↩️ Đang trả lời',
+        replied_message_prefix: 'Trả lời',
+        system_copied: '⚙️ Hệ thống: Đã sao chép văn bản',
+        system_md_on: '⚙️ Hệ thống: Đã bật định dạng Markdown',
+        system_md_off: '⚙️ Hệ thống: Đã tắt định dạng Markdown'
     }
 };

@@ -5,7 +5,11 @@ const messageSchema = new mongoose.Schema({
     id: String,
     text: String,
     timestamp: { type: Number, default: Date.now },
-    useMarkdown: { type: Boolean, default: true }
+    useMarkdown: { type: Boolean, default: true },
+    replyTo: { 
+        id: String,
+        text: String
+    }
 });
 
 module.exports = mongoose.model('Message', messageSchema);
