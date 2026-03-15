@@ -1,6 +1,7 @@
 // 初始化 Socket.io 連線
 const socket = io();
 
+const loadingOverlay = document.getElementById('loading-overlay');
 const lobbyView = document.getElementById('lobby-view');
 const chatView = document.getElementById('chat-view');
 const roomList = document.getElementById('room-list');
@@ -243,4 +244,14 @@ socket.on('chat message', function(data) {
         // 頻率正常時，使用傳統模式顯示並自動捲動
         addMessage(data, false);
     }
+});
+
+// 監聽 Socket.io 連線成功事件 (隱藏載入畫面)
+socket.on('connect', () => {
+    loadingOverlay.classList.add('hidden');
+});
+
+// 監聽 Socket.io 斷線事件 (顯示載入畫面)
+socket.on('disconnect', () => {
+    loadingOverlay.classList.remove('hidden');
 });
