@@ -460,12 +460,18 @@ function renderRoomList() {
 
     // 3. 狀態過濾 (上鎖/公開)
     if (filterLocked !== null) {
-        filteredRooms = filteredRooms.filter(room => room.isLocked === filterLocked);
+        // 加上 !! 確保以前建立的舊房間 (isLocked 為 undefined) 也能被當作公開房
+        filteredRooms = filteredRooms.filter(room => !!room.isLocked === filterLocked);
     }
 
     // 4. 排序 (預設最新，若有 /hot 則按人數最多)
     if (sortByHot) {
-        filteredRooms.sort((a, b) => b.userCount - a.userCount);
+        filteredRooms.sort((a, b) => {
+            if (b.userCount !== a.userCount) {
+                return b.userCount - a.userCount;
+            }
+            return b.createdAt - a.createdAt; // 人數相同時，新房間排前面
+        });
     } else {
         filteredRooms.sort((a, b) => b.createdAt - a.createdAt);
     }
