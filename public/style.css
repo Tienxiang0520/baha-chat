@@ -145,6 +145,7 @@ header {
     max-width: 80%;
     word-wrap: break-word;
     line-height: 1.4;
+    white-space: pre-wrap; /* 讓換行符號正常顯示 */
 }
 
 #room-list {
@@ -255,6 +256,9 @@ header {
     background-color: #f0f2f5;
     outline: none;
     font-size: 16px;
+    resize: none; /* 防止使用者拖拉改變大小 */
+    font-family: inherit; /* 確保字體與網頁一致 */
+    height: 44px; /* 固定高度，如果打多行文字將會自動出現捲軸 */
 }
 
 #form button {
