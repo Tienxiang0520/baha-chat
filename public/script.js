@@ -347,7 +347,14 @@ form.addEventListener('submit', function(e) {
         // 將輸入的訊息發送給伺服器，並附帶目前房間名稱
         socket.emit('chat message', { room: currentRoom, text: input.value.trim() });
         input.value = ''; // 清空輸入框
+        input.style.height = 'auto'; // 送出後重置輸入框高度
     }
+});
+
+// 讓輸入框自動根據內容調整高度
+input.addEventListener('input', function() {
+    this.style.height = 'auto'; // 先重置高度以重新計算
+    this.style.height = this.scrollHeight + 'px'; // 設定為實際內容高度
 });
 
 // 讓使用者在聊天輸入框按 Enter 也能發送訊息

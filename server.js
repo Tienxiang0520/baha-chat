@@ -1,8 +1,10 @@
+require('dotenv').config(); // 載入 .env 檔案中的環境變數
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const mongoose = require('mongoose');
 const nodemailer = require('nodemailer');
+const { MongoMemoryServer } = require('mongodb-memory-server');
 
 const app = express();
 const server = http.createServer(app);
@@ -22,10 +24,21 @@ const transporter = nodemailer.createTransport({
 let hasSentUpgradeEmail = false; // 避免人數在 189~190 之間浮動時狂發 Email
 
 // 1. 連線到 MongoDB (環境變數 MONGODB_URI 是留給 Render 設定用的)
-const mongoURI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/baha';
-mongoose.connect(mongoURI)
-    .then(() => console.log('✅ MongoDB 資料庫連線成功'))
-    .catch(err => console.error('❌ MongoDB 連線失敗:', err));
+async function connectDB() {
+    let mongoURI = process.env.MONGODB_URI;
+    
+    // 如果沒有設定 MONGODB_URI (代表在本地端)，就啟動虛擬記憶體資料庫
+    if (!mongoURI) {
+        const mongoServer = await MongoMemoryServer.create();
+        mongoURI = mongoServer.getUri();
+        console.log('💡 啟動本地虛擬記憶體 MongoDB 模式');
+    }
+
+    mongoose.connect(mongoURI)
+        .then(() => console.log('✅ MongoDB 資料庫連線成功'))
+        .catch(err => console.error('❌ MongoDB 連線失敗:', err));
+}
+connectDB();
 
 // 2. 建立資料庫結構 (Schema) 與模型 (Model)
 const roomSchema = new mongoose.Schema({
@@ -166,5 +179,5 @@ io.on('connection', async (socket) => {
 const PORT = process.env.PORT || 3000;
 // 加入 '0.0.0.0' 確保雲端平台可以正確路由流量
 server.listen(PORT, '0.0.0.0', () => {
-    console.log(`Baha 匿名論壇伺服器已啟動，監聽 Port：${PORT}`);
+    console.log(`Baha 匿名論壇伺服器已啟動， http://localhost:${PORT}/`);
 });
