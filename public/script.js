@@ -103,6 +103,7 @@ function parseMarkdown(text) {
     parsed = parsed.replace(/\|\|(.*?)\|\|/g, '<span class="spoiler" onclick="this.classList.toggle(\'revealed\')">$1</span>'); // 防雷線
     parsed = parsed.replace(/\*\*([^*_]+)\*\*/g, '<strong>$1</strong>'); // 粗體
     parsed = parsed.replace(/\*([^*_]+)\*/g, '<em>$1</em>'); // 斜體
+    parsed = parsed.replace(/__([^_]+)__/g, '<u>$1</u>'); // 底線
     parsed = parsed.replace(/~~([^~]+)~~/g, '<del>$1</del>'); // 刪除線
     // 因為前面已經執行了 escapeHTML，所以 > 會變成 &gt;
     parsed = parsed.replace(/^&gt;\s?(.*)$/gm, '<blockquote>$1</blockquote>'); // 引用
