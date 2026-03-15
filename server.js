@@ -40,20 +40,9 @@ async function connectDB() {
 }
 connectDB();
 
-// 2. 建立資料庫結構 (Schema) 與模型 (Model)
-const roomSchema = new mongoose.Schema({
-    name: { type: String, unique: true },
-    createdAt: { type: Number, default: Date.now }
-});
-const Room = mongoose.model('Room', roomSchema);
-
-const messageSchema = new mongoose.Schema({
-    roomName: String,
-    id: String,
-    text: String,
-    timestamp: { type: Number, default: Date.now }
-});
-const Message = mongoose.model('Message', messageSchema);
+// 2. 載入資料庫模型 (Models)
+const Room = require('./models/Room');
+const Message = require('./models/Message');
 
 // 3. 確保預設的「綜合閒聊」大廳永遠存在
 Room.findOne({ name: '綜合閒聊' }).then(room => {
