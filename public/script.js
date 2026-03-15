@@ -96,7 +96,10 @@ function parseMarkdown(text) {
         return `__CODE_BLOCK_${codeBlocks.length - 1}__`;
     });
 
-    // 3. 處理其他格式
+    // 3. 處理自動連結 (Auto-linking)
+    parsed = parsed.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer" class="chat-link">$1</a>');
+
+    // 4. 處理其他格式
     parsed = parsed.replace(/\|\|(.*?)\|\|/g, '<span class="spoiler" onclick="this.classList.toggle(\'revealed\')">$1</span>'); // 防雷線
     parsed = parsed.replace(/\*\*([^*_]+)\*\*/g, '<strong>$1</strong>'); // 粗體
     parsed = parsed.replace(/\*([^*_]+)\*/g, '<em>$1</em>'); // 斜體
@@ -104,7 +107,7 @@ function parseMarkdown(text) {
     // 因為前面已經執行了 escapeHTML，所以 > 會變成 &gt;
     parsed = parsed.replace(/^&gt;\s?(.*)$/gm, '<blockquote>$1</blockquote>'); // 引用
 
-    // 4. 把 Code Blocks 放回去
+    // 5. 把 Code Blocks 放回去
     codeBlocks.forEach((block, i) => {
         parsed = parsed.replace(`__CODE_BLOCK_${i}__`, block);
     });

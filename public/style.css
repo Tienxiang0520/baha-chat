@@ -347,6 +347,16 @@ header {
     background-color: rgba(0, 0, 0, 0.1);
     color: inherit;
 }
+
+/* 自動連結樣式 */
+.chat-link {
+    color: #0066cc;
+    text-decoration: none;
+    word-break: break-all; /* 防止長網址撐破版面 */
+}
+.chat-link:hover {
+    text-decoration: underline;
+}
 /* =========================== */
 
 /* 用於顯示自己的訊息 */
@@ -377,4 +387,10 @@ header {
 #messages li.my-message .spoiler.revealed {
     background-color: rgba(0, 0, 0, 0.2);
     color: white;
+}
+
+/* 讓自己訊息中的連結在藍色背景上保持清晰 */
+#messages li.my-message .chat-link {
+    color: #ffffff;
+    text-decoration: underline;
 }
