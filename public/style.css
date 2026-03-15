@@ -9,7 +9,8 @@ body {
     background-color: #f0f2f5;
     display: flex;
     justify-content: center;
-    height: 100vh;
+    height: 100vh; /* Fallback 舊版瀏覽器 */
+    height: 100dvh; /* 自動適配手機動態網址列的高度 */
 }
 
 /* 用來隱藏不需要顯示的畫面 */
@@ -55,20 +56,21 @@ body {
     background-color: #fff;
     display: flex;
     flex-direction: column;
+    height: 100%;
     box-shadow: 0 0 10px rgba(0,0,0,0.1);
 }
 
 header {
     background-color: #333;
     color: #fff;
-    padding: 15px;
+    padding: calc(15px + env(safe-area-inset-top)) 15px 15px 15px; /* 適配頂部瀏海/動態島 */
     text-align: center;
 }
 
 .chat-header {
     display: flex;
     align-items: center;
-    padding: 15px;
+    padding: calc(15px + env(safe-area-inset-top)) 15px 15px 15px; /* 適配頂部瀏海/動態島 */
     background-color: #333;
     color: #fff;
     position: relative;
@@ -102,8 +104,8 @@ header {
 
 #danmaku-container {
     position: absolute;
-    top: 60px; /* 避開頂部標題 */
-    bottom: 60px; /* 避開底部輸入框 */
+    top: calc(60px + env(safe-area-inset-top)); /* 避開頂部標題 */
+    bottom: calc(60px + env(safe-area-inset-bottom)); /* 避開底部輸入框 */
     left: 0;
     right: 0;
     pointer-events: none; /* 讓滑鼠點擊穿透，不影響下面訊息的點擊 */
@@ -236,7 +238,7 @@ header {
 
 #room-list {
     list-style-type: none;
-    padding: 20px;
+    padding: 20px 20px calc(20px + env(safe-area-inset-bottom)) 20px; /* 適配大廳底部留白 */
     flex-grow: 1;
     overflow-y: auto;
 }
@@ -329,7 +331,7 @@ header {
 
 #form {
     display: flex;
-    padding: 10px;
+    padding: 10px 10px calc(10px + env(safe-area-inset-bottom)) 10px; /* 適配底部主畫面橫條 */
     background-color: #fff;
     border-top: 1px solid #ccc;
 }
