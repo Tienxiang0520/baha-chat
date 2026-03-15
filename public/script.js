@@ -9,6 +9,7 @@ const createRoomBtn = document.getElementById('create-room-btn');
 const searchInput = document.getElementById('search-input');
 const backBtn = document.getElementById('back-btn');
 const roomTitle = document.getElementById('room-title');
+const danmakuContainer = document.getElementById('danmaku-container');
 
 const form = document.getElementById('form');
 const input = document.getElementById('input');
@@ -16,6 +17,8 @@ const messages = document.getElementById('messages');
 
 let currentRoom = ''; // 紀錄目前所在的房間
 let allRooms = []; // 儲存從伺服器收到的所有房間列表
+let messageTimestamps = []; // 紀錄訊息抵達的時間以計算頻率
+const DANMAKU_THRESHOLD = 10; // 觸發彈幕模式的門檻 (條/秒)
 
 /**
  * 根據字串(ID)計算出專屬的 HSL 顏色
@@ -34,8 +37,9 @@ function stringToColor(str) {
 /**
  * 將一則訊息新增到畫面上
  * @param {object} data - 包含 id, text 和 timestamp 的訊息物件
+ * @param {boolean} skipScroll - 是否跳過捲動 (彈幕模式時使用)
  */
-function addMessage(data) {
+function addMessage(data, skipScroll = false) {
     const item = document.createElement('li');
     const isMyMessage = socket.id && data.id === socket.id.substring(0, 6);
 
@@ -67,7 +71,26 @@ function addMessage(data) {
 
     messages.appendChild(item);
     
-    messages.scrollTo(0, messages.scrollHeight);
+    if (!skipScroll) {
+        messages.scrollTo(0, messages.scrollHeight);
+    }
+}
+
+/**
+ * 建立並播放一條彈幕
+ */
+function createDanmaku(data) {
+    const span = document.createElement('span');
+    span.className = 'danmaku-msg';
+    span.textContent = data.text;
+    
+    // 隨機垂直位置 (10% ~ 80%)，避免彈幕重疊
+    const top = Math.floor(Math.random() * 70) + 10;
+    span.style.top = `${top}%`;
+    span.style.color = stringToColor(data.id);
+
+    danmakuContainer.appendChild(span);
+    setTimeout(() => span.remove(), 4000); // 4 秒動畫結束後清除元素
 }
 
 /**
@@ -205,6 +228,19 @@ socket.on('chat history', function(history) {
 
 // 監聽來自伺服器的訊息
 socket.on('chat message', function(data) {
-    // 將新訊息新增到畫面上
-    addMessage(data);
+    const now = Date.now();
+    messageTimestamps.push(now);
+    
+    // 濾除超過 1 秒前的時間戳記，只保留最近 1 秒內的
+    messageTimestamps = messageTimestamps.filter(t => now - t <= 1000);
+
+    // 如果頻率超過門檻，則啟動彈幕模式
+    if (messageTimestamps.length > DANMAKU_THRESHOLD) {
+        createDanmaku(data);
+        // 依然把訊息加入列表，但停止畫面自動往下捲動，避免傳統列表畫面閃爍過快
+        addMessage(data, true); 
+    } else {
+        // 頻率正常時，使用傳統模式顯示並自動捲動
+        addMessage(data, false);
+    }
 });

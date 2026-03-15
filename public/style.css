@@ -39,6 +39,7 @@ header {
     padding: 15px;
     background-color: #333;
     color: #fff;
+    position: relative;
 }
 
 .chat-header h1 {
@@ -61,6 +62,37 @@ header {
 
 #back-btn:hover {
     background: rgba(255, 255, 255, 0.4);
+}
+
+#chat-view {
+    position: relative; /* 讓彈幕可以絕對定位在聊天室內 */
+}
+
+#danmaku-container {
+    position: absolute;
+    top: 60px; /* 避開頂部標題 */
+    bottom: 60px; /* 避開底部輸入框 */
+    left: 0;
+    right: 0;
+    pointer-events: none; /* 讓滑鼠點擊穿透，不影響下面訊息的點擊 */
+    overflow: hidden;
+    z-index: 10;
+}
+
+.danmaku-msg {
+    position: absolute;
+    white-space: nowrap;
+    font-size: 1.5rem;
+    font-weight: bold;
+    /* 加入邊框陰影，確保在任何背景顏色下都清晰可見 */
+    text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff, 2px 2px 4px rgba(0,0,0,0.5);
+    left: 100%; /* 從容器最右側外開始 */
+    animation: danmaku-slide 4s linear forwards;
+}
+
+@keyframes danmaku-slide {
+    0% { left: 100%; transform: translateX(0); }
+    100% { left: 0%; transform: translateX(-100%); } /* 完全滑出左側邊界 */
 }
 
 #messages {
