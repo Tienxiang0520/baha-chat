@@ -20,6 +20,7 @@ let currentRoom = ''; // 紀錄目前所在的房間
 let allRooms = []; // 儲存從伺服器收到的所有房間列表
 let messageTimestamps = []; // 紀錄訊息抵達的時間以計算頻率
 const DANMAKU_THRESHOLD = 10; // 觸發彈幕模式的門檻 (條/秒)
+let isMarkdownEnabled = true; // 紀錄是否啟用 Markdown
 
 // 自動偵測瀏覽器語言
 function getBrowserLanguage() {
@@ -62,6 +63,17 @@ function stringToColor(str) {
     }
     const hue = Math.abs(hash) % 360; // 將數字轉換為 0~359 的色相角度
     return `hsl(${hue}, 70%, 45%)`; // 飽和度 70%, 亮度 45% 確保字體在淺色背景上夠清晰
+}
+
+/**
+ * 增加系統提示訊息到畫面上
+ */
+function addSystemMessage(text) {
+    const item = document.createElement('li');
+    item.className = 'system-message';
+    item.textContent = text;
+    messages.appendChild(item);
+    messages.scrollTo(0, messages.scrollHeight);
 }
 
 /**
@@ -137,7 +149,9 @@ function addMessage(data, skipScroll = false) {
     }
 
     const textSpan = document.createElement('span');
-    textSpan.innerHTML = parseMarkdown(data.text); // 使用 HTML 渲染 Markdown，並防護 XSS
+    // 根據該則訊息發送時的設定來決定是否渲染 (相容舊訊息，預設為 true)
+    const applyMarkdown = data.useMarkdown !== false;
+    textSpan.innerHTML = applyMarkdown ? parseMarkdown(data.text) : escapeHTML(data.text);
     item.appendChild(textSpan);
 
     // 如果訊息有時間戳記，則格式化並顯示
@@ -283,9 +297,20 @@ socket.on('room list', (rooms) => {
 // 處理表單提交
 form.addEventListener('submit', function(e) {
     e.preventDefault(); // 防止頁面重新整理
-    if (input.value.trim() && currentRoom) {
-        // 將輸入的訊息發送給伺服器，並附帶目前房間名稱
-        socket.emit('chat message', { room: currentRoom, text: input.value.trim() });
+    const text = input.value.trim();
+    
+    // 檢查是否為 Markdown 切換指令
+    if (text === '/md') {
+        isMarkdownEnabled = !isMarkdownEnabled;
+        addSystemMessage(`⚙️ 系統提示：您發送的訊息已${isMarkdownEnabled ? '開啟' : '關閉'} Markdown 格式化`);
+        input.value = ''; // 清空輸入框
+        input.style.height = 'auto'; // 重置輸入框高度
+        return; // 中斷執行，不把指令發送給伺服器
+    }
+
+    if (text && currentRoom) {
+        // 將輸入的訊息發送給伺服器，並附帶目前房間名稱與格式化設定
+        socket.emit('chat message', { room: currentRoom, text: text, useMarkdown: isMarkdownEnabled });
         input.value = ''; // 清空輸入框
         input.style.height = 'auto'; // 送出後重置輸入框高度
     }

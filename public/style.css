@@ -148,6 +148,16 @@ header {
     white-space: pre-wrap; /* 讓換行符號正常顯示 */
 }
 
+/* 系統提示訊息 */
+#messages li.system-message {
+    align-self: center;
+    background-color: transparent;
+    color: #888;
+    font-size: 0.85rem;
+    padding: 5px;
+    font-weight: bold;
+}
+
 #room-list {
     list-style-type: none;
     padding: 20px;
