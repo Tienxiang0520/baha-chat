@@ -10,8 +10,8 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-// 儲存最近的聊天紀錄，並設定上限為 50 則
-const MAX_HISTORY = 50;
+// 設定每次進入房間時預設載入的歷史訊息數量 (不再刪除資料庫中的訊息)
+const LOAD_HISTORY_LIMIT = 50;
 
 // 設定 Email 發送器 (需在 Render 設定環境變數 EMAIL_USER 和 EMAIL_PASS)
 const transporter = nodemailer.createTransport({
@@ -124,8 +124,9 @@ io.on('connection', async (socket) => {
             if (room !== socket.id) socket.leave(room);
         });
         socket.join(roomName);
-        // 從資料庫讀取該房間的歷史訊息 (最多撈 50 筆，按時間正序排)
-        const messages = await Message.find({ roomName }).sort({ timestamp: 1 }).limit(MAX_HISTORY);
+        // 從資料庫撈取最新的歷史訊息，並反轉順序讓畫面由舊到新正常顯示
+        let messages = await Message.find({ roomName }).sort({ timestamp: -1 }).limit(LOAD_HISTORY_LIMIT);
+        messages = messages.reverse();
         socket.emit('chat history', messages);
         // 廣播給所有人更新房間列表 (因為人數變動)
         io.emit('room list', await getSortedRoomList());
@@ -145,16 +146,9 @@ io.on('connection', async (socket) => {
 
         const existingRoom = await Room.findOne({ name: room });
         if (existingRoom) {
-            // 1. 將新訊息存入資料庫
+            // 將新訊息存入資料庫，永久保存
             await Message.create({ roomName: room, ...messageData });
             
-            // 2. 避免無上限增長：如果超過 50 則，刪除最舊的訊息
-            const msgCount = await Message.countDocuments({ roomName: room });
-            if (msgCount > MAX_HISTORY) {
-                const oldestMsg = await Message.findOne({ roomName: room }).sort({ timestamp: 1 });
-                if (oldestMsg) await Message.deleteOne({ _id: oldestMsg._id });
-            }
-
             // 只將訊息廣播給在同一個房間的使用者
             io.to(room).emit('chat message', messageData);
         }
