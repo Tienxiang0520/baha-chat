@@ -11,6 +11,7 @@ body {
     justify-content: center;
     height: 100vh; /* Fallback 舊版瀏覽器 */
     height: 100dvh; /* 自動適配手機動態網址列的高度 */
+    overflow: hidden; /* 確保 body 不會出現垂直拉條 */
 }
 
 /* 用來隱藏不需要顯示的畫面 */
@@ -57,6 +58,8 @@ body {
     display: flex;
     flex-direction: column;
     height: 100%;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
     box-shadow: 0 0 10px rgba(0,0,0,0.1);
 }
 
@@ -64,6 +67,7 @@ header {
     background-color: #333;
     color: #fff;
     padding: calc(15px + env(safe-area-inset-top)) 15px 15px 15px; /* 適配頂部瀏海/動態島 */
+    padding: 15px; /* 移除 safe-area，統一交由 container 處理 */
     text-align: center;
 }
 
@@ -71,6 +75,7 @@ header {
     display: flex;
     align-items: center;
     padding: calc(15px + env(safe-area-inset-top)) 15px 15px 15px; /* 適配頂部瀏海/動態島 */
+    padding: 15px; /* 移除 safe-area，統一交由 container 處理 */
     background-color: #333;
     color: #fff;
     position: relative;
@@ -106,6 +111,8 @@ header {
     position: absolute;
     top: calc(60px + env(safe-area-inset-top)); /* 避開頂部標題 */
     bottom: calc(60px + env(safe-area-inset-bottom)); /* 避開底部輸入框 */
+    top: 60px; /* 避開頂部標題 */
+    bottom: 60px; /* 避開底部輸入框 */
     left: 0;
     right: 0;
     pointer-events: none; /* 讓滑鼠點擊穿透，不影響下面訊息的點擊 */
@@ -239,6 +246,7 @@ header {
 #room-list {
     list-style-type: none;
     padding: 20px 20px calc(20px + env(safe-area-inset-bottom)) 20px; /* 適配大廳底部留白 */
+    padding: 20px; /* 移除 safe-area，統一交由 container 處理 */
     flex-grow: 1;
     overflow-y: auto;
 }
@@ -332,6 +340,7 @@ header {
 #form {
     display: flex;
     padding: 10px 10px calc(10px + env(safe-area-inset-bottom)) 10px; /* 適配底部主畫面橫條 */
+    padding: 10px; /* 移除 safe-area，統一交由 container 處理 */
     background-color: #fff;
     border-top: 1px solid #ccc;
 }
@@ -649,4 +658,5 @@ header {
 
 @keyframes fall {
     to { transform: translateY(100vh) rotate(720deg); }
+    to { transform: translateY(100dvh) rotate(720deg); }
 }
