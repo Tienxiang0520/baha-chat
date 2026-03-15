@@ -135,6 +135,23 @@ function addSystemMessage(text) {
 }
 
 /**
+ * 觸發派對碎紙花特效
+ */
+function triggerPartyEffect() {
+    const colors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff'];
+    for (let i = 0; i < 60; i++) {
+        const confetti = document.createElement('div');
+        confetti.className = 'confetti';
+        confetti.style.left = Math.random() * 100 + 'vw';
+        confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+        confetti.style.animationDuration = (Math.random() * 2 + 2) + 's';
+        confetti.style.animationDelay = (Math.random() * 0.5) + 's';
+        document.body.appendChild(confetti);
+        setTimeout(() => confetti.remove(), 4000);
+    }
+}
+
+/**
  * 防止 XSS 攻擊的字串跳脫函式
  */
 function escapeHTML(str) {
@@ -428,9 +445,20 @@ form.addEventListener('submit', function(e) {
         return; // 中斷執行，不把指令發送給伺服器
     }
 
-    if (text && currentRoom) {
+    // 檢查互動特效指令
+    let effect = null;
+    let emitText = text;
+    if (text.startsWith('/quake')) {
+        effect = 'quake';
+        emitText = text.replace(/^\/quake\s*/, '') || t.effect_quake;
+    } else if (text.startsWith('/party')) {
+        effect = 'party';
+        emitText = text.replace(/^\/party\s*/, '') || t.effect_party;
+    }
+
+    if (emitText && currentRoom) {
         // 將輸入的訊息發送給伺服器，並附帶目前房間名稱與格式化設定
-        socket.emit('chat message', { room: currentRoom, text: text, useMarkdown: isMarkdownEnabled, replyTo: replyingTo });
+        socket.emit('chat message', { room: currentRoom, text: emitText, useMarkdown: isMarkdownEnabled, replyTo: replyingTo, effect: effect });
         input.value = ''; // 清空輸入框
         input.style.height = 'auto'; // 送出後重置輸入框高度
         replyingTo = null; // 送出後清空回覆狀態
@@ -464,6 +492,14 @@ socket.on('chat history', function(history) {
 
 // 監聽來自伺服器的訊息
 socket.on('chat message', function(data) {
+    // 觸發全螢幕特效
+    if (data.effect === 'quake') {
+        document.body.classList.add('quake-effect');
+        setTimeout(() => document.body.classList.remove('quake-effect'), 800);
+    } else if (data.effect === 'party') {
+        triggerPartyEffect();
+    }
+
     const now = Date.now();
     messageTimestamps.push(now);
     

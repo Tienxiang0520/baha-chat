@@ -130,8 +130,8 @@ io.on('connection', async (socket) => {
 
     // 監聽來自前端的 'chat message' 事件
     socket.on('chat message', async (data) => {
-        const { room, text, useMarkdown, replyTo } = data;
-        const messageData = { id: userId, text: text, timestamp: Date.now(), useMarkdown: useMarkdown, replyTo: replyTo };
+        const { room, text, useMarkdown, replyTo, effect } = data;
+        const messageData = { id: userId, text: text, timestamp: Date.now(), useMarkdown: useMarkdown, replyTo: replyTo, effect: effect };
 
         const existingRoom = await Room.findOne({ name: room });
         if (existingRoom) {

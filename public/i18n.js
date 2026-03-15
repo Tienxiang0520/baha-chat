@@ -23,7 +23,9 @@ const translations = {
         replied_message_prefix: '回覆',
         system_copied: '⚙️ 系統提示：已複製訊息文字',
         system_md_on: '⚙️ 系統提示：您發送的訊息已開啟 Markdown 格式化',
-        system_md_off: '⚙️ 系統提示：您發送的訊息已關閉 Markdown 格式化'
+        system_md_off: '⚙️ 系統提示：您發送的訊息已關閉 Markdown 格式化',
+        effect_quake: '✨ 發動了地震特效！',
+        effect_party: '🎉 發動了派對特效！'
     },
     'zh-CN': {
         connecting: '连接中...',
@@ -48,7 +50,9 @@ const translations = {
         replied_message_prefix: '回复',
         system_copied: '⚙️ 系统提示：已复制消息文字',
         system_md_on: '⚙️ 系统提示：您发送的消息已开启 Markdown 格式化',
-        system_md_off: '⚙️ 系统提示：您发送的消息已关闭 Markdown 格式化'
+        system_md_off: '⚙️ 系统提示：您发送的消息已关闭 Markdown 格式化',
+        effect_quake: '✨ 发动了地震特效！',
+        effect_party: '🎉 发动了派对特效！'
     },
     'en': {
         connecting: 'Connecting...',
@@ -73,7 +77,9 @@ const translations = {
         replied_message_prefix: 'Replying to',
         system_copied: '⚙️ System: Message text copied',
         system_md_on: '⚙️ System: Markdown formatting enabled',
-        system_md_off: '⚙️ System: Markdown formatting disabled'
+        system_md_off: '⚙️ System: Markdown formatting disabled',
+        effect_quake: '✨ Triggered earthquake effect!',
+        effect_party: '🎉 Triggered party effect!'
     },
     'ja': {
         connecting: '接続中...',
@@ -98,7 +104,9 @@ const translations = {
         replied_message_prefix: '返信先',
         system_copied: '⚙️ システム: コピーしました',
         system_md_on: '⚙️ システム: Markdownをオンにしました',
-        system_md_off: '⚙️ システム: Markdownをオフにしました'
+        system_md_off: '⚙️ システム: Markdownをオフにしました',
+        effect_quake: '✨ 地震エフェクトを発動しました！',
+        effect_party: '🎉 パーティーエフェクトを発動しました！'
     },
     'ko': {
         connecting: '연결 중...',
@@ -123,7 +131,9 @@ const translations = {
         replied_message_prefix: '답장 대상',
         system_copied: '⚙️ 시스템: 메시지가 복사되었습니다',
         system_md_on: '⚙️ 시스템: 마크다운 서식이 켜졌습니다',
-        system_md_off: '⚙️ 시스템: 마크다운 서식이 꺼졌습니다'
+        system_md_off: '⚙️ 시스템: 마크다운 서식이 꺼졌습니다',
+        effect_quake: '✨ 지진 효과를 발동했습니다!',
+        effect_party: '🎉 파티 효과를 발동했습니다!'
     },
     'vi': {
         connecting: 'Đang kết nối...',
@@ -148,6 +158,8 @@ const translations = {
         replied_message_prefix: 'Trả lời',
         system_copied: '⚙️ Hệ thống: Đã sao chép văn bản',
         system_md_on: '⚙️ Hệ thống: Đã bật định dạng Markdown',
-        system_md_off: '⚙️ Hệ thống: Đã tắt định dạng Markdown'
+        system_md_off: '⚙️ Hệ thống: Đã tắt định dạng Markdown',
+        effect_quake: '✨ Đã kích hoạt hiệu ứng động đất!',
+        effect_party: '🎉 Đã kích hoạt hiệu ứng bữa tiệc!'
     }
 };

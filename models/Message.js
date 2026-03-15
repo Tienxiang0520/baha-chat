@@ -9,7 +9,8 @@ const messageSchema = new mongoose.Schema({
     replyTo: { 
         id: String,
         text: String
-    }
+    },
+    effect: String
 });
 
 module.exports = mongoose.model('Message', messageSchema);
