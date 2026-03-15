@@ -8,6 +8,10 @@
     <meta name="description" content="Baha 是一個輕量、即時的匿名文字聊天論壇。免註冊、免登入，建立專屬話題房間，享受純粹的交流與互動體驗。">
     <meta name="keywords" content="Baha, 匿名聊天, 文字論壇, 聊天室, 免費聊天, 即時通訊, 匿名交友">
     <meta name="author" content="Baha">
+    <meta name="theme-color" content="#333333">
+    <link rel="icon" href="/icon/favicon.ico" type="image/x-icon">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="apple-touch-icon" href="/icon/icon-192.png">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -68,5 +72,16 @@
     <script src="/socket.io/socket.io.js"></script>
     <script src="i18n.js"></script>
     <script src="script.js"></script>
+    
+    <!-- 註冊 Service Worker -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(registration => console.log('ServiceWorker 註冊成功'))
+                    .catch(err => console.log('ServiceWorker 註冊失敗: ', err));
+            });
+        }
+    </script>
 </body>
 </html>
