@@ -27,7 +27,8 @@ const translations = {
         effect_quake: '✨ 發動了地震特效！',
         effect_party: '🎉 發動了派對特效！',
         drive_download: '☁️ Google 雲端檔案 (點擊直接下載)',
-        canvas_prompt: '🖍️ 一起畫畫吧：'
+        canvas_prompt: '🖍️ 一起畫畫吧：',
+        roll_result: '🎲 擲出了 {num} 點！'
     },
     'zh-CN': {
         connecting: '连接中...',
@@ -56,7 +57,8 @@ const translations = {
         effect_quake: '✨ 发动了地震特效！',
         effect_party: '🎉 发动了派对特效！',
         drive_download: '☁️ Google 云端文件 (点击直接下载)',
-        canvas_prompt: '🖍️ 一起画画吧：'
+        canvas_prompt: '🖍️ 一起画画吧：',
+        roll_result: '🎲 掷出了 {num} 点！'
     },
     'en': {
         connecting: 'Connecting...',
@@ -85,7 +87,8 @@ const translations = {
         effect_quake: '✨ Triggered earthquake effect!',
         effect_party: '🎉 Triggered party effect!',
         drive_download: '☁️ Google Drive File (Click to download)',
-        canvas_prompt: "🖍️ Let's draw together: "
+        canvas_prompt: "🖍️ Let's draw together: ",
+        roll_result: '🎲 Rolled a {num}!'
     },
     'ja': {
         connecting: '接続中...',
@@ -114,7 +117,8 @@ const translations = {
         effect_quake: '✨ 地震エフェクトを発動しました！',
         effect_party: '🎉 パーティーエフェクトを発動しました！',
         drive_download: '☁️ Google ドライブファイル (クリックしてダウンロード)',
-        canvas_prompt: '🖍️ 一緒に絵を描きましょう：'
+        canvas_prompt: '🖍️ 一緒に絵を描きましょう：',
+        roll_result: '🎲 {num} を出しました！'
     },
     'ko': {
         connecting: '연결 중...',
@@ -143,7 +147,8 @@ const translations = {
         effect_quake: '✨ 지진 효과를 발동했습니다!',
         effect_party: '🎉 파티 효과를 발동했습니다!',
         drive_download: '☁️ Google 드라이브 파일 (클릭하여 다운로드)',
-        canvas_prompt: '🖍️ 함께 그림을 그려요: '
+        canvas_prompt: '🖍️ 함께 그림을 그려요: ',
+        roll_result: '🎲 {num}이(가) 나왔습니다!'
     },
     'vi': {
         connecting: 'Đang kết nối...',
@@ -172,6 +177,7 @@ const translations = {
         effect_quake: '✨ Đã kích hoạt hiệu ứng động đất!',
         effect_party: '🎉 Đã kích hoạt hiệu ứng bữa tiệc!',
         drive_download: '☁️ Tệp Google Drive (Nhấp để tải xuống)',
-        canvas_prompt: '🖍️ Cùng vẽ nào: '
+        canvas_prompt: '🖍️ Cùng vẽ nào: ',
+        roll_result: '🎲 Đã tung được {num} điểm!'
     }
 };

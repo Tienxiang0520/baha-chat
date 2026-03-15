@@ -508,6 +508,11 @@ form.addEventListener('submit', function(e) {
             return result;
         };
         emitText = `${t.canvas_prompt}https://excalidraw.com/#room=${generateRandomString(20)},${generateRandomString(22)}`;
+    } else if (text.startsWith('/roll')) {
+        const num = Math.floor(Math.random() * 100) + 1; // 產生 1~100 的隨機數字
+        const rollText = (t.roll_result || '🎲 擲出了 {num} 點！').replace('{num}', num);
+        const extraText = text.replace(/^\/roll\s*/, '');
+        emitText = extraText ? `${rollText} (${extraText})` : rollText;
     }
 
     if (emitText && currentRoom) {
