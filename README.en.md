@@ -1,0 +1,72 @@
+# Baha - Anonymous Text Chat Forum 💬
+
+*🌍 Read this in other languages: [English](README.en.md), [繁體中文](README.md).*
+---
+
+Baha is a real-time anonymous text chat platform built with Node.js and Socket.io. Users can freely create topic rooms, communicate instantly, and enjoy interactive features like Danmaku (bullet curtain) mode.
+
+[👉 Click here to see supported Markdown commands](#-supported-markdown-formatting-commands)
+
+## ✨ Core Features
+
+- **Completely Anonymous**: The system automatically assigns a random short ID (e.g., `[aB3x9Z]`) to each connected user, and generates an exclusive fixed display color for each ID via a hash algorithm.
+- **Multi-language Support (i18n)**: Automatically detects browser language, providing Traditional Chinese, Simplified Chinese, English, Japanese, Korean, and Vietnamese interfaces.
+- **PWA Desktop Installation**: Perfectly adapts to mobile notches and bottom safe areas. Supports direct installation to mobile and desktop home screens for a native app-like fullscreen experience.
+- **Dynamic Topic Lobby**:
+  - Freely create new topic rooms.
+  - **Password Protected Rooms**: Enter `/lock [password] [room_name]` in the lobby to create a private room with a 🔒 icon. Passwords are securely hashed using bcrypt.
+  - Real-time display of "online user count" and "creation time" for each room.
+  - Supports real-time keyword search and filtering for topics.
+- **Smooth Real-time Chat**:
+  - Distinguishes between "self" and "others" message bubbles (similar to LINE/Messenger UI).
+  - Includes precise timestamps.
+  - **Interactive Menu & Reply**: Right-click (PC) or long-press (Mobile) a message to open a menu to "↩️ Reply" or copy text.
+  - Supports lightweight Discord-like Markdown formatting (bold, code blocks, spoilers, etc.).
+- **Multimedia & Link Previews**:
+  - Automatically converts image, video (mp4/webm/mov), and audio (mp3/wav/ogg) URLs into built-in players within the chat box.
+  - Seamless YouTube video embedding.
+  - Automatically fetches titles, descriptions, and thumbnails of general web pages to generate beautiful visual preview cards.
+  - Recognizes Google Drive URLs and converts them into clear one-click download buttons.
+- **🚀 Danmaku Mode**: When the message frequency in a room is too high (over 10 msgs/sec), the system automatically activates Danmaku mode. Messages will fly across the screen from right to left, preventing the chat from scrolling too fast to read.
+- **Data Persistence**: Integrated with MongoDB cloud database. Topic lists and the latest 50 chat records are safely stored even if the server restarts or sleeps.
+- **Server Load Alerts**: When the total online users reach the threshold (190 users), the backend automatically sends an email to alert the administrator.
+- **Graceful Reconnection**: Provides a fullscreen loading/reconnection overlay when the server sleeps or network disconnects, optimizing user experience.
+
+## 🛠️ Tech Stack
+
+- **Frontend**: HTML5, CSS3, Vanilla JavaScript
+- **Backend**: Node.js, Express.js
+- **Real-time**: Socket.io
+- **Database**: MongoDB, Mongoose (Cloud hosted on MongoDB Atlas)
+- **Email Service**: Nodemailer
+
+## 📝 Supported Markdown Formatting Commands
+
+| Effect | Syntax | Example |
+| :--- | :--- | :--- |
+| **Bold** | `**text**` | `**This is bold**` |
+| *Italic* | `*text*` | `*This is italic*` |
+| <u>Underline</u> | `__text__` | `__This is underline__` |
+| <del>Strikethrough</del> | `~~text~~` | `~~This is strikethrough~~` |
+| Blockquote | `> text` | `> This is a quote` |
+| Spoiler (Click to reveal) | `\|\|text\|\|` | `\|\|The butler did it\|\|` |
+| Inline Code | \`code\` | \`console.log()\` |
+| Code Block | \`\`\`<br>code<br>\`\`\` | \`\`\`<br>let a = 1;<br>\`\`\` |
+| Toggle Markdown | `/md` | Type `/md` to enable or disable formatting |
+
+## 🎉 Interactive Effects & Utility Commands
+
+- `/canvas`: Automatically generate a dedicated Excalidraw real-time canvas URL to draw together!
+- `/roll [text]`: Roll a random number from 1 to 100, great for drawing lots or comparing sizes!
+- `/party [text]`: Fullscreen confetti explosion, perfect for celebrations or welcoming!
+- `/quake [text]`: Fullscreen severe shaking, great for expressing shock or excitement!
+
+## 🚀 Local Installation & Execution
+
+```bash
+git clone https://github.com/YourAccount/baha-chat.git
+cd baha-chat
+npm install
+npm start
+```
+Open `http://localhost:3000` in your browser.

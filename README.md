@@ -1,5 +1,8 @@
 # Baha - 匿名文字聊天論壇 💬
 
+*🌍 Read this in other languages: [English](README.en.md), [繁體中文](README.md).*
+---
+
 Baha 是一個基於 Node.js 與 Socket.io 打造的即時匿名文字聊天平台。使用者可以自由建立話題房間、即時交流，並具備彈幕模式等趣味互動功能。
 
 [👉 點擊這裡查看聊天室支援的 Markdown 語法指令](#-支援的-markdown-格式指令)
