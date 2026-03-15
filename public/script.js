@@ -499,9 +499,15 @@ form.addEventListener('submit', function(e) {
         effect = 'party';
         emitText = text.replace(/^\/party\s*/, '') || t.effect_party;
     } else if (text.startsWith('/canvas')) {
-        // 產生一組隨機的 tldraw 房間 ID
-        const randomId = Math.random().toString(36).substring(2, 10) + Math.random().toString(36).substring(2, 10);
-        emitText = `${t.canvas_prompt}https://tldraw.com/r/${randomId}`;
+        // tldraw 已不支援隨機網址開房，改用同樣強大的 Excalidraw
+        // Excalidraw 房間網址格式: https://excalidraw.com/#room=[20碼ID],[22碼Base64URL金鑰]
+        const generateRandomString = (length) => {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
+            let result = '';
+            for (let i = 0; i < length; i++) result += chars.charAt(Math.floor(Math.random() * chars.length));
+            return result;
+        };
+        emitText = `${t.canvas_prompt}https://excalidraw.com/#room=${generateRandomString(20)},${generateRandomString(22)}`;
     }
 
     if (emitText && currentRoom) {
