@@ -183,7 +183,7 @@ function parseMarkdown(text) {
         return `__CODE_BLOCK_${codeBlocks.length - 1}__`;
     });
 
-    // 3. 處理自動連結與圖片/影片預覽 (Auto-linking & Media Preview)
+    // 3. 處理自動連結與多媒體預覽 (Auto-linking & Multimedia Preview)
     parsed = parsed.replace(/(https?:\/\/[^\s]+)/g, (match, url) => {
         // 判斷是否為 YouTube 網址，擷取 11 碼的影片 ID
         const ytMatch = url.match(/(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/i);
@@ -196,6 +196,17 @@ function parseMarkdown(text) {
         if (/\.(png|jpe?g|gif|webp)(\?.*)?$/i.test(url)) {
             return `<a href="${url}" target="_blank" rel="noopener noreferrer"><img src="${url}" class="chat-image-preview" alt="圖片預覽" loading="lazy" /></a>`;
         }
+
+        // 判斷網址是否為常見的影片格式
+        if (/\.(mp4|webm|mov)(\?.*)?$/i.test(url)) {
+            return `<video controls class="chat-video-preview" src="${url}" preload="metadata" playsinline></video>`;
+        }
+
+        // 判斷網址是否為常見的音檔格式
+        if (/\.(mp3|wav|m4a|ogg)(\?.*)?$/i.test(url)) {
+            return `<audio controls class="chat-audio-preview" src="${url}" preload="metadata"></audio>`;
+        }
+
         // 一般網址
         return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="chat-link">${url}</a>`;
     });

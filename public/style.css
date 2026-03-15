@@ -462,6 +462,24 @@ header {
     display: block;
 }
 
+/* 直連影片預覽樣式 */
+.chat-video-preview {
+    max-width: 100%;
+    max-height: 250px;
+    border-radius: 8px;
+    margin-top: 5px;
+    display: block;
+    background-color: #000;
+}
+
+/* 音檔預覽樣式 */
+.chat-audio-preview {
+    max-width: 100%;
+    margin-top: 5px;
+    display: block;
+    height: 40px; /* 限制播放器高度 */
+}
+
 /* 視覺化網址摘要卡片 (Link Preview) */
 .link-preview-card {
     display: flex;
