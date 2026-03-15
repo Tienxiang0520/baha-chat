@@ -336,7 +336,7 @@ header {
     font-style: italic;
     /* 解決中文字體斜體不夠明顯的問題，強制傾斜 */
     display: inline-block; /* transform 需要 block 級別才能生效 */
-    transform: skewX(-12deg); /* 負值代表向右傾斜，數字越大越斜 */
+    transform: skewX(-20deg); /* 負值代表向右傾斜，數字越大越斜 */
     padding: 0 2px; /* 避免傾斜後字體邊緣與其他字太近 */
 }
 
