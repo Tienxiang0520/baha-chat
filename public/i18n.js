@@ -28,7 +28,9 @@ const translations = {
         effect_party: '🎉 發動了派對特效！',
         drive_download: '☁️ Google 雲端檔案 (點擊直接下載)',
         canvas_prompt: '🖍️ 一起畫畫吧：',
-        roll_result: '🎲 擲出了 {num} 點！'
+        roll_result: '🎲 擲出了 {num} 點！',
+        prompt_password: '此房間已上鎖，請輸入密碼：',
+        wrong_password: '❌ 密碼錯誤！'
     },
     'zh-CN': {
         connecting: '连接中...',
@@ -58,7 +60,9 @@ const translations = {
         effect_party: '🎉 发动了派对特效！',
         drive_download: '☁️ Google 云端文件 (点击直接下载)',
         canvas_prompt: '🖍️ 一起画画吧：',
-        roll_result: '🎲 掷出了 {num} 点！'
+        roll_result: '🎲 掷出了 {num} 点！',
+        prompt_password: '此房间已上锁，请输入密码：',
+        wrong_password: '❌ 密码错误！'
     },
     'en': {
         connecting: 'Connecting...',
@@ -88,7 +92,9 @@ const translations = {
         effect_party: '🎉 Triggered party effect!',
         drive_download: '☁️ Google Drive File (Click to download)',
         canvas_prompt: "🖍️ Let's draw together: ",
-        roll_result: '🎲 Rolled a {num}!'
+        roll_result: '🎲 Rolled a {num}!',
+        prompt_password: 'This room is locked. Please enter the password:',
+        wrong_password: '❌ Incorrect password!'
     },
     'ja': {
         connecting: '接続中...',
@@ -118,7 +124,9 @@ const translations = {
         effect_party: '🎉 パーティーエフェクトを発動しました！',
         drive_download: '☁️ Google ドライブファイル (クリックしてダウンロード)',
         canvas_prompt: '🖍️ 一緒に絵を描きましょう：',
-        roll_result: '🎲 {num} を出しました！'
+        roll_result: '🎲 {num} を出しました！',
+        prompt_password: 'このルームはロックされています。パスワードを入力してください：',
+        wrong_password: '❌ パスワードが間違っています！'
     },
     'ko': {
         connecting: '연결 중...',
@@ -148,7 +156,9 @@ const translations = {
         effect_party: '🎉 파티 효과를 발동했습니다!',
         drive_download: '☁️ Google 드라이브 파일 (클릭하여 다운로드)',
         canvas_prompt: '🖍️ 함께 그림을 그려요: ',
-        roll_result: '🎲 {num}이(가) 나왔습니다!'
+        roll_result: '🎲 {num}이(가) 나왔습니다!',
+        prompt_password: '이 방은 잠겨 있습니다. 비밀번호를 입력하세요:',
+        wrong_password: '❌ 비밀번호가 틀렸습니다!'
     },
     'vi': {
         connecting: 'Đang kết nối...',
@@ -178,6 +188,8 @@ const translations = {
         effect_party: '🎉 Đã kích hoạt hiệu ứng bữa tiệc!',
         drive_download: '☁️ Tệp Google Drive (Nhấp để tải xuống)',
         canvas_prompt: '🖍️ Cùng vẽ nào: ',
-        roll_result: '🎲 Đã tung được {num} điểm!'
+        roll_result: '🎲 Đã tung được {num} điểm!',
+        prompt_password: 'Phòng này đã bị khóa. Vui lòng nhập mật khẩu:',
+        wrong_password: '❌ Sai mật khẩu!'
     }
 };

@@ -5,6 +5,7 @@ const { Server } = require('socket.io');
 const mongoose = require('mongoose');
 const nodemailer = require('nodemailer');
 const { MongoMemoryServer } = require('mongodb-memory-server');
+const bcrypt = require('bcrypt');
 
 const app = express();
 const server = http.createServer(app);
@@ -32,6 +33,7 @@ async function connectDB() {
         const mongoServer = await MongoMemoryServer.create();
         mongoURI = mongoServer.getUri();
         console.log('💡 啟動本地虛擬記憶體 MongoDB 模式');
+        console.log(`🔗 請打開 MongoDB Compass，貼上以下網址連線查看資料：\n${mongoURI}`);
     }
 
     mongoose.connect(mongoURI)
@@ -64,7 +66,8 @@ const getSortedRoomList = async () => {
         return {
             name: room.name,
             createdAt: room.createdAt,
-            userCount
+            userCount,
+            isLocked: room.isLocked
         };
     });
     return roomList;
@@ -136,17 +139,38 @@ io.on('connection', async (socket) => {
     socket.emit('room list', await getSortedRoomList());
 
     // 監聽建立新話題房間
-    socket.on('create room', async (roomName) => {
+    socket.on('create room', async (data) => {
+        const roomName = typeof data === 'string' ? data : data.name;
+        const password = typeof data === 'object' ? data.password : null;
+
         const existingRoom = await Room.findOne({ name: roomName });
         if (!existingRoom) {
-            await Room.create({ name: roomName, createdAt: Date.now() });
+            let hashedPassword = null;
+            if (password) {
+                // 使用 bcrypt 加密密碼，10 是 saltRounds (加鹽與計算複雜度)
+                hashedPassword = await bcrypt.hash(password, 10);
+            }
+            await Room.create({ name: roomName, createdAt: Date.now(), isLocked: !!password, password: hashedPassword });
             // 廣播給所有人更新房間列表
             io.emit('room list', await getSortedRoomList());
         }
     });
 
     // 監聽加入房間
-    socket.on('join room', async (roomName) => {
+    socket.on('join room', async (data) => {
+        const roomName = typeof data === 'string' ? data : data.name;
+        const password = typeof data === 'object' ? data.password : null;
+
+        const targetRoom = await Room.findOne({ name: roomName });
+        if (targetRoom && targetRoom.isLocked) {
+            // 使用 bcrypt 比對使用者輸入的密碼與資料庫中的加密密碼是否相符
+            const isMatch = await bcrypt.compare(password || '', targetRoom.password);
+            if (!isMatch) {
+                socket.emit('join error', 'wrong_password'); // 密碼錯誤
+                return;
+            }
+        }
+
         // 離開其他的話題房間 (避免收到其他房間的訊息)
         socket.rooms.forEach(room => {
             if (room !== socket.id) socket.leave(room);
@@ -158,6 +182,9 @@ io.on('connection', async (socket) => {
         socket.emit('chat history', messages);
         // 廣播給所有人更新房間列表 (因為人數變動)
         io.emit('room list', await getSortedRoomList());
+        
+        // 通知前端加入成功，可以切換畫面了
+        socket.emit('join success', roomName);
     });
 
     // 監聽離開房間 (返回大廳時觸發)
@@ -170,6 +197,11 @@ io.on('connection', async (socket) => {
     // 監聽來自前端的 'chat message' 事件
     socket.on('chat message', async (data) => {
         const { room, text, useMarkdown, replyTo, effect } = data;
+
+        // 【安全防護】檢查該使用者是否真的有成功加入這個房間（防止未輸入密碼者透過程式碼強行發送）
+        if (!socket.rooms.has(room)) {
+            return; 
+        }
         
         // 檢查並抓取網址摘要
         const preview = await fetchLinkPreview(text);

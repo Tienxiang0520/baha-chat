@@ -392,9 +392,21 @@ function formatTimeAgo(timestamp) {
 
 // 建立新話題房間
 createRoomBtn.addEventListener('click', () => {
-    const roomName = roomInput.value.trim();
-    if (roomName) {
-        socket.emit('create room', roomName);
+    const inputValue = roomInput.value.trim();
+    if (inputValue) {
+        let roomName = inputValue;
+        let password = null;
+        
+        // 檢查是否使用 /lock 指令建立密碼房
+        if (inputValue.startsWith('/lock ')) {
+            const parts = inputValue.split(' ');
+            if (parts.length >= 3) {
+                password = parts[1];
+                roomName = parts.slice(2).join(' '); // 剩下的字串都是房間名稱
+            }
+        }
+
+        socket.emit('create room', { name: roomName, password: password });
         roomInput.value = '';
     }
 });
@@ -434,7 +446,7 @@ function renderRoomList() {
 
         const nameSpan = document.createElement('span');
         nameSpan.className = 'room-name-text';
-        nameSpan.textContent = `💬 ${room.name}`;
+        nameSpan.textContent = `${room.isLocked ? '🔒' : '💬'} ${room.name}`;
 
         const infoSpan = document.createElement('span');
         infoSpan.className = 'room-info';
@@ -454,17 +466,31 @@ function renderRoomList() {
         li.appendChild(infoSpan);
 
         li.addEventListener('click', () => {
-            currentRoom = room.name;
-            roomTitle.textContent = room.name;
-            socket.emit('join room', room.name);
-
-            // 切換視圖到聊天室
-            lobbyView.classList.add('hidden');
-            chatView.classList.remove('hidden');
+            let password = null;
+            if (room.isLocked) {
+                password = prompt(t.prompt_password);
+                if (password === null) return; // 使用者按了取消
+            }
+            socket.emit('join room', { name: room.name, password: password });
         });
         roomList.appendChild(li);
     });
 }
+
+// 監聽加入房間成功
+socket.on('join success', (roomName) => {
+    currentRoom = roomName;
+    roomTitle.textContent = roomName;
+    
+    // 切換視圖到聊天室
+    lobbyView.classList.add('hidden');
+    chatView.classList.remove('hidden');
+});
+
+// 監聽加入房間失敗 (密碼錯誤)
+socket.on('join error', (errorKey) => {
+    alert(t[errorKey] || '加入房間失敗！');
+});
 
 // 監聽搜尋框的輸入事件
 searchInput.addEventListener('input', renderRoomList);
