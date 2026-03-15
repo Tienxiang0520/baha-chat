@@ -254,6 +254,31 @@ function addMessage(data, skipScroll = false) {
     textSpan.innerHTML = applyMarkdown ? parseMarkdown(data.text) : escapeHTML(data.text);
     item.appendChild(textSpan);
 
+    // 5. 如果有網址摘要，渲染視覺化卡片
+    if (data.linkPreview && data.linkPreview.title) {
+        const previewCard = document.createElement('a');
+        previewCard.className = 'link-preview-card';
+        previewCard.href = data.linkPreview.url;
+        previewCard.target = '_blank';
+        previewCard.rel = 'noopener noreferrer';
+
+        const previewContent = document.createElement('div');
+        previewContent.className = 'link-preview-content';
+        previewContent.innerHTML = `
+            <div class="link-preview-title">${escapeHTML(data.linkPreview.title)}</div>
+            ${data.linkPreview.description ? `<div class="link-preview-desc">${escapeHTML(data.linkPreview.description)}</div>` : ''}
+        `;
+        previewCard.appendChild(previewContent);
+
+        if (data.linkPreview.image) {
+            const previewImg = document.createElement('img');
+            previewImg.className = 'link-preview-image';
+            previewImg.src = data.linkPreview.image;
+            previewCard.appendChild(previewImg);
+        }
+        item.appendChild(previewCard);
+    }
+
     // 4. 如果訊息有時間戳記，則格式化並顯示
     if (data.timestamp) {
         const timeSpan = document.createElement('span');

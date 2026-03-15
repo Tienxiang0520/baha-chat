@@ -70,6 +70,45 @@ const getSortedRoomList = async () => {
     return roomList;
 };
 
+// 輕量級網頁摘要抓取函式 (抓取 Open Graph 標籤)
+async function fetchLinkPreview(text) {
+    const urlMatch = text.match(/(https?:\/\/[^\s]+)/);
+    if (!urlMatch) return null;
+    const url = urlMatch[0];
+
+    // 跳過圖片、影片檔案或 YouTube 網址 (因為前端已經有專屬預覽了)
+    if (/\.(png|jpe?g|gif|webp|mp4|webm)(\?.*)?$/i.test(url)) return null;
+    if (url.includes('youtube.com') || url.includes('youtu.be')) return null;
+
+    try {
+        // 設定 2.5 秒超時，避免因為對方網站太慢導致聊天延遲
+        const response = await fetch(url, { signal: AbortSignal.timeout(2500) });
+        if (!response.ok) return null;
+        const html = await response.text();
+
+        const getMeta = (name) => {
+            const match = html.match(new RegExp(`<meta[^>]+(?:property|name)="'?${name}["'][^>]+content=["']([^"']+)["']`, 'i')) || 
+                          html.match(new RegExp(`<meta[^>]+content=["']([^"']+)["'][^>]+(?:property|name)="'?${name}["']`, 'i'));
+            return match ? match[1] : null;
+        };
+
+        const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+        let title = getMeta('title') || (titleMatch ? titleMatch[1] : null);
+        let description = getMeta('description') || '';
+        let image = getMeta('image') || '';
+
+        if (title) {
+            // 處理相對路徑圖片轉絕對路徑
+            if (image && !image.startsWith('http')) image = new URL(image, url).href;
+            // 簡易 HTML 解碼
+            title = title.replace(/&#x27;/g, "'").replace(/&quot;/g, '"').replace(/&amp;/g, '&');
+            description = description.replace(/&#x27;/g, "'").replace(/&quot;/g, '"').replace(/&amp;/g, '&');
+            return { url, title, description, image };
+        }
+    } catch (err) { /* 忽略抓取錯誤，直接回傳 null */ }
+    return null;
+}
+
 // 監聽使用者的 Socket.io 連線
 io.on('connection', async (socket) => {
     // 取 socket.id 的前 6 個字元作為匿名使用者的隨機 ID
@@ -131,7 +170,10 @@ io.on('connection', async (socket) => {
     // 監聽來自前端的 'chat message' 事件
     socket.on('chat message', async (data) => {
         const { room, text, useMarkdown, replyTo, effect } = data;
-        const messageData = { id: userId, text: text, timestamp: Date.now(), useMarkdown: useMarkdown, replyTo: replyTo, effect: effect };
+        
+        // 檢查並抓取網址摘要
+        const preview = await fetchLinkPreview(text);
+        const messageData = { id: userId, text: text, timestamp: Date.now(), useMarkdown: useMarkdown, replyTo: replyTo, effect: effect, linkPreview: preview };
 
         const existingRoom = await Room.findOne({ name: room });
         if (existingRoom) {

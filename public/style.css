@@ -462,6 +462,54 @@ header {
     display: block;
 }
 
+/* 視覺化網址摘要卡片 (Link Preview) */
+.link-preview-card {
+    display: flex;
+    background-color: rgba(0, 0, 0, 0.05);
+    border-left: 4px solid #888;
+    border-radius: 6px;
+    margin-top: 8px;
+    overflow: hidden;
+    max-width: 450px;
+    text-decoration: none;
+    color: inherit;
+    transition: background-color 0.2s;
+}
+.link-preview-card:hover {
+    background-color: rgba(0, 0, 0, 0.08);
+}
+.link-preview-content {
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    flex: 1;
+}
+.link-preview-title {
+    font-weight: bold;
+    font-size: 0.95rem;
+    color: #0066cc;
+    margin-bottom: 4px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+.link-preview-desc {
+    font-size: 0.8rem;
+    color: #555;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+.link-preview-image {
+    width: 100px;
+    height: 100px;
+    object-fit: cover;
+    border-left: 1px solid rgba(0,0,0,0.1);
+}
+
 /* 自動連結樣式 */
 .chat-link {
     color: #0066cc;
@@ -484,6 +532,21 @@ header {
 #messages li.my-message .replied-message {
     background-color: rgba(255, 255, 255, 0.2);
     border-left-color: #fff;
+    color: #eee;
+}
+
+/* 讓自己訊息中的網址摘要卡片配合藍色背景 */
+#messages li.my-message .link-preview-card {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-left-color: #fff;
+}
+#messages li.my-message .link-preview-card:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+#messages li.my-message .link-preview-title {
+    color: #fff;
+}
+#messages li.my-message .link-preview-desc {
     color: #eee;
 }
 

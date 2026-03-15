@@ -10,7 +10,13 @@ const messageSchema = new mongoose.Schema({
         id: String,
         text: String
     },
-    effect: String
+    effect: String,
+    linkPreview: {
+        url: String,
+        title: String,
+        description: String,
+        image: String
+    }
 });
 
 module.exports = mongoose.model('Message', messageSchema);
