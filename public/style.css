@@ -297,6 +297,58 @@ header {
     margin-left: 8px;
 }
 
+/* ====== Markdown 樣式 ====== */
+#messages li pre {
+    background-color: #2b2b2b;
+    color: #f8f8f2;
+    padding: 10px;
+    border-radius: 8px;
+    overflow-x: auto;
+    margin: 5px 0;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 0.95rem;
+}
+
+#messages li code {
+    background-color: rgba(0, 0, 0, 0.1);
+    padding: 2px 4px;
+    border-radius: 4px;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 0.9em;
+}
+
+#messages li pre code {
+    background-color: transparent;
+    padding: 0;
+    font-size: 1em;
+}
+
+#messages li blockquote {
+    border-left: 4px solid #ccc;
+    margin: 5px 0 5px 0;
+    padding-left: 10px;
+    color: #555;
+    background-color: rgba(0, 0, 0, 0.03);
+    border-radius: 0 4px 4px 0;
+}
+
+/* 防雷線 (Spoiler) 樣式 */
+.spoiler {
+    background-color: #202225; /* 深灰色遮罩 */
+    color: transparent; /* 隱藏文字 */
+    border-radius: 4px;
+    padding: 0 4px;
+    cursor: pointer;
+    transition: background-color 0.2s, color 0.2s;
+    user-select: none; /* 防止反白偷看 */
+}
+
+.spoiler.revealed {
+    background-color: rgba(0, 0, 0, 0.1);
+    color: inherit;
+}
+/* =========================== */
+
 /* 用於顯示自己的訊息 */
 #messages li.my-message {
     align-self: flex-end;
@@ -307,4 +359,22 @@ header {
 /* 讓自己訊息的時間戳顏色變淺 */
 #messages li.my-message .message-time {
     color: #e0e0e0;
+}
+
+/* 讓自己訊息中的 Markdown 配合藍色背景 */
+#messages li.my-message code {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+#messages li.my-message blockquote {
+    border-left-color: rgba(255, 255, 255, 0.5);
+    background-color: rgba(255, 255, 255, 0.1);
+    color: #f0f0f0;
+}
+#messages li.my-message .spoiler {
+    background-color: rgba(255, 255, 255, 0.8); /* 自己發出的防雷線用白色遮罩 */
+    color: transparent;
+}
+#messages li.my-message .spoiler.revealed {
+    background-color: rgba(0, 0, 0, 0.2);
+    color: white;
 }

@@ -65,6 +65,54 @@ function stringToColor(str) {
 }
 
 /**
+ * 防止 XSS 攻擊的字串跳脫函式
+ */
+function escapeHTML(str) {
+    return str.replace(/[&<>'"]/g, 
+        tag => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            "'": '&#39;',
+            '"': '&quot;'
+        }[tag] || tag)
+    );
+}
+
+/**
+ * 輕量級 Markdown 解析器 (支援 Discord 常用語法)
+ */
+function parseMarkdown(text) {
+    let parsed = escapeHTML(text); // 1. 先跳脫 HTML 標籤，確保安全
+
+    // 2. 提取 Code Blocks (```) 與 Inline Code (`)，避免裡面的內容被後面的正則格式化
+    const codeBlocks = [];
+    parsed = parsed.replace(/```([\s\S]*?)```/g, (match, p1) => {
+        codeBlocks.push(`<pre><code>${p1}</code></pre>`);
+        return `__CODE_BLOCK_${codeBlocks.length - 1}__`;
+    });
+    parsed = parsed.replace(/`([^`\n]+)`/g, (match, p1) => {
+        codeBlocks.push(`<code>${p1}</code>`);
+        return `__CODE_BLOCK_${codeBlocks.length - 1}__`;
+    });
+
+    // 3. 處理其他格式
+    parsed = parsed.replace(/\|\|(.*?)\|\|/g, '<span class="spoiler" onclick="this.classList.toggle(\'revealed\')">$1</span>'); // 防雷線
+    parsed = parsed.replace(/\*\*([^*_]+)\*\*/g, '<strong>$1</strong>'); // 粗體
+    parsed = parsed.replace(/\*([^*_]+)\*/g, '<em>$1</em>'); // 斜體
+    parsed = parsed.replace(/~~([^~]+)~~/g, '<del>$1</del>'); // 刪除線
+    // 因為前面已經執行了 escapeHTML，所以 > 會變成 &gt;
+    parsed = parsed.replace(/^&gt;\s?(.*)$/gm, '<blockquote>$1</blockquote>'); // 引用
+
+    // 4. 把 Code Blocks 放回去
+    codeBlocks.forEach((block, i) => {
+        parsed = parsed.replace(`__CODE_BLOCK_${i}__`, block);
+    });
+
+    return parsed;
+}
+
+/**
  * 將一則訊息新增到畫面上
  * @param {object} data - 包含 id, text 和 timestamp 的訊息物件
  * @param {boolean} skipScroll - 是否跳過捲動 (彈幕模式時使用)
@@ -85,7 +133,7 @@ function addMessage(data, skipScroll = false) {
     }
 
     const textSpan = document.createElement('span');
-    textSpan.textContent = data.text;
+    textSpan.innerHTML = parseMarkdown(data.text); // 使用 HTML 渲染 Markdown，並防護 XSS
     item.appendChild(textSpan);
 
     // 如果訊息有時間戳記，則格式化並顯示
