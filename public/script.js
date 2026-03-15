@@ -436,10 +436,39 @@ backBtn.addEventListener('click', () => {
  * 根據搜尋條件渲染房間列表
  */
 function renderRoomList() {
-    const searchTerm = searchInput.value.toLowerCase();
+    let searchTerm = searchInput.value.toLowerCase().trim();
     roomList.innerHTML = '';
 
-    const filteredRooms = allRooms.filter(room => room.name.toLowerCase().includes(searchTerm));
+    // 1. 偵測特殊搜尋指令
+    let sortByHot = false;
+    let filterLocked = null; // null: 不過濾, true: 只要密碼房, false: 只要公開房
+
+    if (searchTerm.includes('/hot')) {
+        sortByHot = true;
+        searchTerm = searchTerm.replace('/hot', '').trim();
+    }
+    if (searchTerm.includes('/lock')) {
+        filterLocked = true;
+        searchTerm = searchTerm.replace('/lock', '').trim();
+    } else if (searchTerm.includes('/open')) {
+        filterLocked = false;
+        searchTerm = searchTerm.replace('/open', '').trim();
+    }
+
+    // 2. 文字過濾
+    let filteredRooms = allRooms.filter(room => room.name.toLowerCase().includes(searchTerm));
+
+    // 3. 狀態過濾 (上鎖/公開)
+    if (filterLocked !== null) {
+        filteredRooms = filteredRooms.filter(room => room.isLocked === filterLocked);
+    }
+
+    // 4. 排序 (預設最新，若有 /hot 則按人數最多)
+    if (sortByHot) {
+        filteredRooms.sort((a, b) => b.userCount - a.userCount);
+    } else {
+        filteredRooms.sort((a, b) => b.createdAt - a.createdAt);
+    }
 
     filteredRooms.forEach(room => {
         const li = document.createElement('li');

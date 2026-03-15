@@ -16,7 +16,10 @@ Baha is a real-time anonymous text chat platform built with Node.js and Socket.i
   - Freely create new topic rooms.
   - **Password Protected Rooms**: Enter `/lock [password] [room_name]` in the lobby to create a private room with a 🔒 icon. Passwords are securely hashed using bcrypt.
   - Real-time display of "online user count" and "creation time" for each room.
-  - Supports real-time keyword search and filtering for topics.
+  - Supports real-time keyword search and filtering for topics. You can use the following commands in the search box:
+    - `/hot`: Sort rooms by online user count.
+    - `/lock`: Show only password-protected rooms.
+    - `/open`: Show only public rooms.
 - **Smooth Real-time Chat**:
   - Distinguishes between "self" and "others" message bubbles (similar to LINE/Messenger UI).
   - Includes precise timestamps.
