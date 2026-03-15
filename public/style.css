@@ -480,6 +480,23 @@ header {
     height: 40px; /* 限制播放器高度 */
 }
 
+/* Google Drive 直接下載按鈕樣式 */
+.chat-drive-link {
+    display: inline-block;
+    background-color: #f1f3f4;
+    color: #1a73e8;
+    padding: 8px 12px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: bold;
+    margin-top: 5px;
+    border: 1px solid #dadce0;
+    transition: background-color 0.2s;
+}
+.chat-drive-link:hover {
+    background-color: #e8eaed;
+}
+
 /* 視覺化網址摘要卡片 (Link Preview) */
 .link-preview-card {
     display: flex;
@@ -566,6 +583,16 @@ header {
 }
 #messages li.my-message .link-preview-desc {
     color: #eee;
+}
+
+/* 讓自己訊息中的 Drive 下載按鈕配合藍色背景 */
+#messages li.my-message .chat-drive-link {
+    background-color: rgba(255, 255, 255, 0.2);
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.3);
+}
+#messages li.my-message .chat-drive-link:hover {
+    background-color: rgba(255, 255, 255, 0.3);
 }
 
 /* 讓自己訊息的時間戳顏色變淺 */

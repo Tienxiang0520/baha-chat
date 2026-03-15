@@ -192,6 +192,14 @@ function parseMarkdown(text) {
             return `<iframe class="chat-youtube-preview" src="https://www.youtube.com/embed/${videoId}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
         }
 
+        // 判斷是否為 Google Drive 網址，轉換為直接下載連結
+        const gdriveMatch = url.match(/drive\.google\.com\/(?:file\/d\/|open\?id=)([a-zA-Z0-9_-]+)/i);
+        if (gdriveMatch && gdriveMatch[1]) {
+            const fileId = gdriveMatch[1];
+            const downloadUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
+            return `<a href="${downloadUrl}" target="_blank" rel="noopener noreferrer" class="chat-drive-link">${t.drive_download}</a>`;
+        }
+
         // 判斷網址是否為常見的圖片格式結尾 (支援網址後方帶有參數 ?xxx)
         if (/\.(png|jpe?g|gif|webp)(\?.*)?$/i.test(url)) {
             return `<a href="${url}" target="_blank" rel="noopener noreferrer"><img src="${url}" class="chat-image-preview" alt="圖片預覽" loading="lazy" /></a>`;

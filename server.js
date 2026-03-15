@@ -76,9 +76,9 @@ async function fetchLinkPreview(text) {
     if (!urlMatch) return null;
     const url = urlMatch[0];
 
-    // 跳過多媒體檔案或 YouTube 網址 (因為前端已經有專屬播放器或預覽了)
+    // 跳過多媒體檔案、YouTube 或 Google Drive 網址 (因為前端已經有專屬播放器或預覽了)
     if (/\.(png|jpe?g|gif|webp|mp4|webm|mov|mp3|wav|m4a|ogg)(\?.*)?$/i.test(url)) return null;
-    if (url.includes('youtube.com') || url.includes('youtu.be')) return null;
+    if (url.includes('youtube.com') || url.includes('youtu.be') || url.includes('drive.google.com')) return null;
 
     try {
         // 設定 2.5 秒超時，避免因為對方網站太慢導致聊天延遲
