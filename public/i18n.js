@@ -25,7 +25,9 @@ const translations = {
         system_md_on: '⚙️ 系統提示：您發送的訊息已開啟 Markdown 格式化',
         system_md_off: '⚙️ 系統提示：您發送的訊息已關閉 Markdown 格式化',
         effect_quake: '✨ 發動了地震特效！',
-        effect_party: '🎉 發動了派對特效！'
+        effect_party: '🎉 發動了派對特效！',
+        drive_download: '☁️ Google 雲端檔案 (點擊直接下載)',
+        canvas_prompt: '🖍️ 一起畫畫吧：'
     },
     'zh-CN': {
         connecting: '连接中...',
@@ -52,7 +54,9 @@ const translations = {
         system_md_on: '⚙️ 系统提示：您发送的消息已开启 Markdown 格式化',
         system_md_off: '⚙️ 系统提示：您发送的消息已关闭 Markdown 格式化',
         effect_quake: '✨ 发动了地震特效！',
-        effect_party: '🎉 发动了派对特效！'
+        effect_party: '🎉 发动了派对特效！',
+        drive_download: '☁️ Google 云端文件 (点击直接下载)',
+        canvas_prompt: '🖍️ 一起画画吧：'
     },
     'en': {
         connecting: 'Connecting...',
@@ -79,7 +83,9 @@ const translations = {
         system_md_on: '⚙️ System: Markdown formatting enabled',
         system_md_off: '⚙️ System: Markdown formatting disabled',
         effect_quake: '✨ Triggered earthquake effect!',
-        effect_party: '🎉 Triggered party effect!'
+        effect_party: '🎉 Triggered party effect!',
+        drive_download: '☁️ Google Drive File (Click to download)',
+        canvas_prompt: "🖍️ Let's draw together: "
     },
     'ja': {
         connecting: '接続中...',
@@ -106,7 +112,9 @@ const translations = {
         system_md_on: '⚙️ システム: Markdownをオンにしました',
         system_md_off: '⚙️ システム: Markdownをオフにしました',
         effect_quake: '✨ 地震エフェクトを発動しました！',
-        effect_party: '🎉 パーティーエフェクトを発動しました！'
+        effect_party: '🎉 パーティーエフェクトを発動しました！',
+        drive_download: '☁️ Google ドライブファイル (クリックしてダウンロード)',
+        canvas_prompt: '🖍️ 一緒に絵を描きましょう：'
     },
     'ko': {
         connecting: '연결 중...',
@@ -133,7 +141,9 @@ const translations = {
         system_md_on: '⚙️ 시스템: 마크다운 서식이 켜졌습니다',
         system_md_off: '⚙️ 시스템: 마크다운 서식이 꺼졌습니다',
         effect_quake: '✨ 지진 효과를 발동했습니다!',
-        effect_party: '🎉 파티 효과를 발동했습니다!'
+        effect_party: '🎉 파티 효과를 발동했습니다!',
+        drive_download: '☁️ Google 드라이브 파일 (클릭하여 다운로드)',
+        canvas_prompt: '🖍️ 함께 그림을 그려요: '
     },
     'vi': {
         connecting: 'Đang kết nối...',
@@ -160,6 +170,8 @@ const translations = {
         system_md_on: '⚙️ Hệ thống: Đã bật định dạng Markdown',
         system_md_off: '⚙️ Hệ thống: Đã tắt định dạng Markdown',
         effect_quake: '✨ Đã kích hoạt hiệu ứng động đất!',
-        effect_party: '🎉 Đã kích hoạt hiệu ứng bữa tiệc!'
+        effect_party: '🎉 Đã kích hoạt hiệu ứng bữa tiệc!',
+        drive_download: '☁️ Tệp Google Drive (Nhấp để tải xuống)',
+        canvas_prompt: '🖍️ Cùng vẽ nào: '
     }
 };

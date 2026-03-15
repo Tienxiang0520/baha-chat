@@ -498,6 +498,10 @@ form.addEventListener('submit', function(e) {
     } else if (text.startsWith('/party')) {
         effect = 'party';
         emitText = text.replace(/^\/party\s*/, '') || t.effect_party;
+    } else if (text.startsWith('/canvas')) {
+        // 產生一組隨機的 tldraw 房間 ID
+        const randomId = Math.random().toString(36).substring(2, 10) + Math.random().toString(36).substring(2, 10);
+        emitText = `${t.canvas_prompt}https://tldraw.com/r/${randomId}`;
     }
 
     if (emitText && currentRoom) {
