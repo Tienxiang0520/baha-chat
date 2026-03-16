@@ -206,14 +206,30 @@ io.on('connection', async (socket) => {
 
         // 【管理員指令攔截：登入】
         if (text.startsWith('/admin login ')) {
-            const pwd = text.replace('/admin login ', '').trim();
-            if (pwd === process.env.ADMIN_PASSWORD) {
-                socket.isAdmin = true;
-                socket.emit('chat message', { id: 'System', text: '👑 歡迎回來，管理員！您現在可以使用 /announce 標題 | 內容 來發布公告。', timestamp: Date.now() });
+            // 安全性強化：使用 bcrypt 比對密碼 hash，而不是明文比對
+            const inputPassword = text.replace('/admin login ', '').trim();
+            const adminPasswordHash = process.env.ADMIN_PASSWORD_HASH;
+
+            if (!adminPasswordHash) {
+                socket.emit('chat message', { id: 'System', text: '❌ 伺服器未設定管理員密碼。', timestamp: Date.now() });
+                return;
+            }
+
+            const isMatch = await bcrypt.compare(inputPassword, adminPasswordHash);
+            if (isMatch) {
+                 socket.isAdmin = true;
+                 socket.emit('chat message', { id: 'System', text: '👑 歡迎回來，管理員！您現在可以使用 /announce 和 /admin logout 指令。', timestamp: Date.now() });
             } else {
-                socket.emit('chat message', { id: 'System', text: '❌ 密碼錯誤！', timestamp: Date.now() });
+                 socket.emit('chat message', { id: 'System', text: '❌ 密碼錯誤！', timestamp: Date.now() });
             }
             return; // 攔截訊息，不廣播
+        }
+
+        // 【管理員指令攔截：登出】
+        if (text.trim() === '/admin logout' && socket.isAdmin) {
+            socket.isAdmin = false;
+            socket.emit('chat message', { id: 'System', text: '👋 您已登出管理員身份。', timestamp: Date.now() });
+            return;
         }
 
         // 【管理員指令攔截：發布公告】
