@@ -30,7 +30,11 @@ const translations = {
         canvas_prompt: '🖍️ 一起畫畫吧：',
         roll_result: '🎲 擲出了 {num} 點！',
         prompt_password: '此房間已上鎖，請輸入密碼：',
-        wrong_password: '❌ 密碼錯誤！'
+        wrong_password: '❌ 密碼錯誤！',
+        locked_message: '🔒 這是一則加密訊息',
+        unlock: '解鎖',
+        enter_password: '輸入密碼',
+        locked_wrong: '密碼錯誤'
     },
     'zh-CN': {
         connecting: '连接中...',
@@ -62,7 +66,11 @@ const translations = {
         canvas_prompt: '🖍️ 一起画画吧：',
         roll_result: '🎲 掷出了 {num} 点！',
         prompt_password: '此房间已上锁，请输入密码：',
-        wrong_password: '❌ 密码错误！'
+        wrong_password: '❌ 密码错误！',
+        locked_message: '🔒 这是一则加密消息',
+        unlock: '解锁',
+        enter_password: '输入密码',
+        locked_wrong: '密码错误'
     },
     'en': {
         connecting: 'Connecting...',
@@ -94,7 +102,11 @@ const translations = {
         canvas_prompt: "🖍️ Let's draw together: ",
         roll_result: '🎲 Rolled a {num}!',
         prompt_password: 'This room is locked. Please enter the password:',
-        wrong_password: '❌ Incorrect password!'
+        wrong_password: '❌ Incorrect password!',
+        locked_message: '🔒 This is an encrypted message',
+        unlock: 'Unlock',
+        enter_password: 'Password',
+        locked_wrong: 'Wrong password'
     },
     'ja': {
         connecting: '接続中...',
@@ -126,7 +138,11 @@ const translations = {
         canvas_prompt: '🖍️ 一緒に絵を描きましょう：',
         roll_result: '🎲 {num} を出しました！',
         prompt_password: 'このルームはロックされています。パスワードを入力してください：',
-        wrong_password: '❌ パスワードが間違っています！'
+        wrong_password: '❌ パスワードが間違っています！',
+        locked_message: '🔒 暗号化されたメッセージです',
+        unlock: 'ロック解除',
+        enter_password: 'パスワード',
+        locked_wrong: 'パスワードが違います'
     },
     'ko': {
         connecting: '연결 중...',
@@ -158,7 +174,11 @@ const translations = {
         canvas_prompt: '🖍️ 함께 그림을 그려요: ',
         roll_result: '🎲 {num}이(가) 나왔습니다!',
         prompt_password: '이 방은 잠겨 있습니다. 비밀번호를 입력하세요:',
-        wrong_password: '❌ 비밀번호가 틀렸습니다!'
+        wrong_password: '❌ 비밀번호가 틀렸습니다!',
+        locked_message: '🔒 암호화된 메시지입니다',
+        unlock: '잠금 해제',
+        enter_password: '비밀번호',
+        locked_wrong: '비밀번호 오류'
     },
     'vi': {
         connecting: 'Đang kết nối...',
@@ -190,6 +210,10 @@ const translations = {
         canvas_prompt: '🖍️ Cùng vẽ nào: ',
         roll_result: '🎲 Đã tung được {num} điểm!',
         prompt_password: 'Phòng này đã bị khóa. Vui lòng nhập mật khẩu:',
-        wrong_password: '❌ Sai mật khẩu!'
+        wrong_password: '❌ Sai mật khẩu!',
+        locked_message: '🔒 Đây là một tin nhắn mã hóa',
+        unlock: 'Mở khóa',
+        enter_password: 'Mật khẩu',
+        locked_wrong: 'Sai mật khẩu'
     }
 };

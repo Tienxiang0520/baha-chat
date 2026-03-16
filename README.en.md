@@ -56,6 +56,7 @@ Baha is a real-time anonymous text chat platform built with Node.js and Socket.i
 | Inline Code | \`code\` | \`console.log()\` |
 | Code Block | \`\`\`<br>code<br>\`\`\` | \`\`\`<br>let a = 1;<br>\`\`\` |
 | Toggle Markdown | `/md` | Type `/md` to enable or disable formatting |
+| Encrypted Message | `[lock:password]text[/lock]` | `[lock:1234]secret[/lock]` |
 
 ## 🎉 Interactive Effects & Utility Commands
 

@@ -183,6 +183,18 @@ function parseMarkdown(text) {
         return `__CODE_BLOCK_${codeBlocks.length - 1}__`;
     });
 
+    // 處理加密訊息 [lock:密碼]內容[/lock]
+    parsed = parsed.replace(/\[lock:(.*?)\]([\s\S]*?)\[\/lock\]/g, (match, password, content) => {
+        const encodedContent = encodeURIComponent(content);
+        return `<div class="locked-message-container">
+                    <div class="locked-header">${t.locked_message}</div>
+                    <div class="locked-body">
+                        <input type="password" class="unlock-input" placeholder="${t.enter_password}">
+                        <button class="unlock-btn" onclick="unlockMessage(this, '${password}', '${encodedContent}')">${t.unlock}</button>
+                    </div>
+                </div>`;
+    });
+
     // 3. 處理自動連結與多媒體預覽 (Auto-linking & Multimedia Preview)
     parsed = parsed.replace(/(https?:\/\/[^\s]+)/g, (match, url) => {
         // 判斷是否為 YouTube 網址，擷取 11 碼的影片 ID
@@ -235,6 +247,23 @@ function parseMarkdown(text) {
 
     return parsed;
 }
+
+/**
+ * 解鎖加密訊息的邏輯
+ */
+window.unlockMessage = function(btnElement, correctPassword, encodedContent) {
+    const container = btnElement.closest('.locked-message-container');
+    const input = container.querySelector('.unlock-input');
+    
+    if (input.value === correctPassword) {
+        // 密碼正確，顯示原本的內容 (這裡我們讓解鎖後的內容也能套用一般的 Markdown，但不包含多媒體和代碼塊避免解析衝突)
+        const decodedContent = decodeURIComponent(encodedContent);
+        container.innerHTML = `<div class="unlocked-content">🔓 ${decodedContent.replace(/\n/g, '<br>')}</div>`;
+    } else {
+        input.value = '';
+        input.placeholder = t.locked_wrong;
+    }
+};
 
 /**
  * 將一則訊息新增到畫面上
