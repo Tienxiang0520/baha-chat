@@ -347,7 +347,22 @@ function addMessage(data, skipScroll = false) {
     const textSpan = document.createElement('span');
     // 根據該則訊息發送時的設定來決定是否渲染 (相容舊訊息，預設為 true)
     const applyMarkdown = data.useMarkdown !== false;
-    textSpan.innerHTML = applyMarkdown ? parseMarkdown(data.text) : escapeHTML(data.text);
+    
+    // 支援多國語系翻譯鍵值
+    let displayText = data.text;
+    if (data.i18nKey && t[data.i18nKey]) {
+        displayText = t[data.i18nKey];
+        if (data.i18nArgs) {
+            for (const [key, value] of Object.entries(data.i18nArgs)) {
+                displayText = displayText.replace(`{${key}}`, value);
+            }
+        }
+        if (data.extraText) {
+            displayText += data.extraText;
+        }
+    }
+
+    textSpan.innerHTML = applyMarkdown ? parseMarkdown(displayText) : escapeHTML(displayText);
     item.appendChild(textSpan);
 
     // 5. 如果有網址摘要，渲染視覺化卡片
@@ -654,35 +669,9 @@ form.addEventListener('submit', function(e) {
         return; // 中斷執行，不把指令發送給伺服器
     }
 
-    // 檢查互動特效指令
-    let effect = null;
-    let emitText = text;
-    if (text.startsWith('/quake')) {
-        effect = 'quake';
-        emitText = text.replace(/^\/quake\s*/, '') || t.effect_quake;
-    } else if (text.startsWith('/party')) {
-        effect = 'party';
-        emitText = text.replace(/^\/party\s*/, '') || t.effect_party;
-    } else if (text.startsWith('/canvas')) {
-        // tldraw 已不支援隨機網址開房，改用同樣強大的 Excalidraw
-        // Excalidraw 房間網址格式: https://excalidraw.com/#room=[20碼ID],[22碼Base64URL金鑰]
-        const generateRandomString = (length) => {
-            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
-            let result = '';
-            for (let i = 0; i < length; i++) result += chars.charAt(Math.floor(Math.random() * chars.length));
-            return result;
-        };
-        emitText = `${t.canvas_prompt}https://excalidraw.com/#room=${generateRandomString(20)},${generateRandomString(22)}`;
-    } else if (text.startsWith('/roll')) {
-        const num = Math.floor(Math.random() * 100) + 1; // 產生 1~100 的隨機數字
-        const rollText = (t.roll_result || '🎲 擲出了 {num} 點！').replace('{num}', num);
-        const extraText = text.replace(/^\/roll\s*/, '');
-        emitText = extraText ? `${rollText} (${extraText})` : rollText;
-    }
-
-    if (emitText && currentRoom) {
+    if (text && currentRoom) {
         // 將輸入的訊息發送給伺服器，並附帶目前房間名稱與格式化設定
-        socket.emit('chat message', { room: currentRoom, text: emitText, useMarkdown: isMarkdownEnabled, replyTo: replyingTo, effect: effect });
+        socket.emit('chat message', { room: currentRoom, text: text, useMarkdown: isMarkdownEnabled, replyTo: replyingTo });
         input.value = ''; // 清空輸入框
         input.style.height = 'auto'; // 送出後重置輸入框高度
         replyingTo = null; // 送出後清空回覆狀態

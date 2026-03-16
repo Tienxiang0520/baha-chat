@@ -205,16 +205,15 @@ io.on('connection', async (socket) => {
     socket.on('chat message', async (data) => {
         const { room, text, useMarkdown, replyTo, effect } = data;
         
-        // 【指令處理】檢查訊息是否為指令，若是則交由 command-handler 處理
-        // handleCommand 會回傳一個布林值，true 代表是指令且已處理，false 代表不是指令
-        const wasCommand = await handleCommand(socket, text);
-        if (wasCommand) {
-            return; // 如果是指令，就攔截訊息，不當作一般聊天內容廣播
+        // 【安全防護】檢查該使用者是否真的有成功加入這個房間（防止未輸入密碼者透過程式碼強行發送）
+        if (room && !socket.rooms.has(room)) {
+            return; 
         }
 
-        // 【安全防護】檢查該使用者是否真的有成功加入這個房間（防止未輸入密碼者透過程式碼強行發送）
-        if (!socket.rooms.has(room)) {
-            return; 
+        // 【指令處理】檢查訊息是否為指令，並將完整 data 傳入以取得 room 等資訊
+        const wasCommand = await handleCommand(socket, data);
+        if (wasCommand) {
+            return; // 攔截訊息，不當作一般聊天內容廣播
         }
         
         // 檢查並抓取網址摘要
