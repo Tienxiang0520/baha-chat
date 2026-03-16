@@ -27,7 +27,10 @@
         <header class="lobby-header">
             <div style="width: 60px; visibility: hidden;"></div> <!-- 佔位平衡 -->
             <h1 data-i18n="lobby_title">Baha 話題大廳</h1>
-            <button id="features-btn" class="header-btn" data-i18n="features">功能</button>
+            <button id="features-btn" class="header-btn">
+                <span data-i18n="features">功能</span>
+                <span id="features-dot" class="notification-dot hidden"></span>
+            </button>
         </header>
         
         <div id="room-form-container">
@@ -49,6 +52,10 @@
         </header>
         <div class="features-content">
             <button id="tutorial-btn" class="feature-menu-btn" data-i18n="command_tutorial">📖 指令教學</button>
+            <button id="announcement-btn" class="feature-menu-btn">
+                <span data-i18n="announcements_title">📢 系統公告</span>
+                <span id="announcement-dot" class="notification-dot hidden"></span>
+            </button>
             <!-- 未來可以在這裡加入設定、個人首頁等按鈕 -->
         </div>
     </div>
@@ -86,6 +93,18 @@
                 <li><code>/canvas</code> : <span data-i18n="tut_canvas">建立共用畫布</span></li>
                 <li><code>/md</code> : <span data-i18n="tut_md">開關 Markdown</span></li>
             </ul>
+        </div>
+    </div>
+
+    <!-- 系統公告畫面 -->
+    <div id="announcement-view" class="chat-container hidden">
+        <header class="chat-header">
+            <button id="back-from-announcement-btn" class="header-btn" data-i18n="back">⬅ 返回</button>
+            <h1 data-i18n="announcements_title">系統公告</h1>
+            <div style="width: 60px; visibility: hidden;"></div> <!-- 佔位平衡 -->
+        </header>
+        <div id="announcement-list" class="announcement-content">
+            <!-- 公告將透過 JS 動態載入於此 -->
         </div>
     </div>
 

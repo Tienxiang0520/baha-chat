@@ -6,6 +6,8 @@ const lobbyView = document.getElementById('lobby-view');
 const chatView = document.getElementById('chat-view');
 const featuresView = document.getElementById('features-view');
 const tutorialView = document.getElementById('tutorial-view');
+const announcementView = document.getElementById('announcement-view');
+const announcementList = document.getElementById('announcement-list');
 const roomList = document.getElementById('room-list');
 const roomInput = document.getElementById('room-input');
 const createRoomBtn = document.getElementById('create-room-btn');
@@ -15,6 +17,10 @@ const featuresBtn = document.getElementById('features-btn');
 const backFromFeaturesBtn = document.getElementById('back-from-features-btn');
 const tutorialBtn = document.getElementById('tutorial-btn');
 const backFromTutorialBtn = document.getElementById('back-from-tutorial-btn');
+const announcementBtn = document.getElementById('announcement-btn');
+const backFromAnnouncementBtn = document.getElementById('back-from-announcement-btn');
+const featuresDot = document.getElementById('features-dot');
+const announcementDot = document.getElementById('announcement-dot');
 const roomTitle = document.getElementById('room-title');
 const danmakuContainer = document.getElementById('danmaku-container');
 const contextMenu = document.getElementById('message-context-menu');
@@ -40,6 +46,7 @@ let replyingTo = null; // 紀錄目前正在回覆的訊息資料
 featuresBtn.addEventListener('click', () => {
     lobbyView.classList.add('hidden');
     featuresView.classList.remove('hidden');
+    featuresDot.classList.add('hidden'); // 點開功能選單時消除右上角紅點
 });
 
 backFromFeaturesBtn.addEventListener('click', () => {
@@ -54,6 +61,17 @@ tutorialBtn.addEventListener('click', () => {
 
 backFromTutorialBtn.addEventListener('click', () => {
     tutorialView.classList.add('hidden');
+    featuresView.classList.remove('hidden');
+});
+
+announcementBtn.addEventListener('click', () => {
+    featuresView.classList.add('hidden');
+    announcementView.classList.remove('hidden');
+    announcementDot.classList.add('hidden'); // 點開公告列表時消除紅點
+});
+
+backFromAnnouncementBtn.addEventListener('click', () => {
+    announcementView.classList.add('hidden');
     featuresView.classList.remove('hidden');
 });
 
@@ -570,6 +588,33 @@ function renderRoomList() {
         roomList.appendChild(li);
     });
 }
+
+// ===== 系統公告渲染與事件 =====
+function createAnnouncementElement(data) {
+    const item = document.createElement('div');
+    item.className = 'announcement-item';
+    const dateStr = new Date(data.createdAt).toLocaleDateString();
+    item.innerHTML = `
+        <div class="announcement-date">${dateStr}</div>
+        <h3 class="announcement-title">${escapeHTML(data.title)}</h3>
+        <p class="announcement-text">${escapeHTML(data.content).replace(/\n/g, '<br>')}</p>
+    `;
+    return item;
+}
+
+socket.on('announcement list', (list) => {
+    announcementList.innerHTML = '';
+    list.forEach(data => announcementList.appendChild(createAnnouncementElement(data)));
+});
+
+socket.on('new announcement', (data) => {
+    announcementList.insertBefore(createAnnouncementElement(data), announcementList.firstChild);
+    // 如果目前不在公告畫面，顯示小紅點提示
+    if (announcementView.classList.contains('hidden')) {
+        featuresDot.classList.remove('hidden');
+        announcementDot.classList.remove('hidden');
+    }
+});
 
 // 監聽加入房間成功
 socket.on('join success', (roomName) => {

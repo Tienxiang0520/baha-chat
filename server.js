@@ -45,6 +45,7 @@ connectDB();
 // 2. 載入資料庫模型 (Models)
 const Room = require('./models/Room');
 const Message = require('./models/Message');
+const Announcement = require('./models/Announcement');
 
 // 3. 確保預設的「綜合閒聊」大廳永遠存在
 Room.findOne({ name: '綜合閒聊' }).then(room => {
@@ -116,6 +117,7 @@ async function fetchLinkPreview(text) {
 io.on('connection', async (socket) => {
     // 取 socket.id 的前 6 個字元作為匿名使用者的隨機 ID
     const userId = socket.id.substring(0, 6);
+    socket.isAdmin = false; // 預設為一般使用者
     console.log(`匿名使用者 ${userId} 已連線`);
 
     // 檢查總線上人數並發送提醒
@@ -137,6 +139,10 @@ io.on('connection', async (socket) => {
 
     // 當新使用者連線時，傳送目前所有可用房間列表
     socket.emit('room list', await getSortedRoomList());
+    
+    // 傳送歷史公告列表 (最多拿最新 20 筆)
+    const announcements = await Announcement.find().sort({ createdAt: -1 }).limit(20);
+    socket.emit('announcement list', announcements);
 
     // 監聽建立新話題房間
     socket.on('create room', async (data) => {
@@ -197,6 +203,34 @@ io.on('connection', async (socket) => {
     // 監聽來自前端的 'chat message' 事件
     socket.on('chat message', async (data) => {
         const { room, text, useMarkdown, replyTo, effect } = data;
+
+        // 【管理員指令攔截：登入】
+        if (text.startsWith('/admin login ')) {
+            const pwd = text.replace('/admin login ', '').trim();
+            if (pwd === process.env.ADMIN_PASSWORD) {
+                socket.isAdmin = true;
+                socket.emit('chat message', { id: 'System', text: '👑 歡迎回來，管理員！您現在可以使用 /announce 標題 | 內容 來發布公告。', timestamp: Date.now() });
+            } else {
+                socket.emit('chat message', { id: 'System', text: '❌ 密碼錯誤！', timestamp: Date.now() });
+            }
+            return; // 攔截訊息，不廣播
+        }
+
+        // 【管理員指令攔截：發布公告】
+        if (text.startsWith('/announce ')) {
+            if (!socket.isAdmin) {
+                socket.emit('chat message', { id: 'System', text: '❌ 您沒有管理員權限！請先登入。', timestamp: Date.now() });
+                return;
+            }
+            const payload = text.replace('/announce ', '');
+            const parts = payload.split('|');
+            if (parts.length >= 2) {
+                const newAnnounce = await Announcement.create({ title: parts[0].trim(), content: parts.slice(1).join('|').trim() });
+                io.emit('new announcement', newAnnounce); // 廣播給全伺服器
+                socket.emit('chat message', { id: 'System', text: '✅ 公告發布成功！大家已經收到了。', timestamp: Date.now() });
+            }
+            return; // 攔截訊息，不廣播
+        }
 
         // 【安全防護】檢查該使用者是否真的有成功加入這個房間（防止未輸入密碼者透過程式碼強行發送）
         if (!socket.rooms.has(room)) {
