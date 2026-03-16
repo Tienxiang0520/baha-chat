@@ -232,6 +232,9 @@ function parseMarkdown(text) {
     });
 
     // 4. 處理其他格式
+    parsed = parsed.replace(/^###\s*(.*)$/gm, '<h3>$1</h3>'); // 三級標題 (放寬限制：允許不加空格)
+    parsed = parsed.replace(/^##\s*(.*)$/gm, '<h2>$1</h2>'); // 二級標題 (放寬限制：允許不加空格)
+    parsed = parsed.replace(/^#\s*(.*)$/gm, '<h1>$1</h1>'); // 一級標題 (放寬限制：允許不加空格)
     parsed = parsed.replace(/\|\|(.*?)\|\|/g, '<span class="spoiler" onclick="this.classList.toggle(\'revealed\')">$1</span>'); // 防雷線
     parsed = parsed.replace(/\*\*([^*_]+)\*\*/g, '<strong>$1</strong>'); // 粗體
     parsed = parsed.replace(/\*([^*_]+)\*/g, '<em>$1</em>'); // 斜體

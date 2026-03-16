@@ -47,6 +47,9 @@ Baha is a real-time anonymous text chat platform built with Node.js and Socket.i
 
 | Effect | Syntax | Example |
 | :--- | :--- | :--- |
+| Heading 1 | `# text` | `# Main Heading` |
+| Heading 2 | `## text` | `## Sub Heading` |
+| Heading 3 | `### text` | `### Small Heading` |
 | **Bold** | `**text**` | `**This is bold**` |
 | *Italic* | `*text*` | `*This is italic*` |
 | <u>Underline</u> | `__text__` | `__This is underline__` |
