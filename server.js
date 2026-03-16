@@ -4,15 +4,14 @@ const http = require('http');
 const { Server } = require('socket.io');
 const mongoose = require('mongoose');
 const nodemailer = require('nodemailer');
-const { MongoMemoryServer } = require('mongodb-memory-server');
 const bcrypt = require('bcrypt');
+const { MongoMemoryServer } = require('mongodb-memory-server');
+const { handleCommand } = require('./command-handler');
+const { LOAD_HISTORY_LIMIT } = require('./config');
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
-
-// 設定每次進入房間時預設載入的歷史訊息數量 (不再刪除資料庫中的訊息)
-const LOAD_HISTORY_LIMIT = 50;
 
 // 設定 Email 發送器 (需在 Render 設定環境變數 EMAIL_USER 和 EMAIL_PASS)
 const transporter = nodemailer.createTransport({
@@ -118,6 +117,8 @@ io.on('connection', async (socket) => {
     // 取 socket.id 的前 6 個字元作為匿名使用者的隨機 ID
     const userId = socket.id.substring(0, 6);
     socket.isAdmin = false; // 預設為一般使用者
+    socket.loginAttempts = 0; // 初始化登入嘗試次數
+    socket.lockoutUntil = null; // 初始化鎖定時間
     console.log(`匿名使用者 ${userId} 已連線`);
 
     // 檢查總線上人數並發送提醒
@@ -203,49 +204,12 @@ io.on('connection', async (socket) => {
     // 監聽來自前端的 'chat message' 事件
     socket.on('chat message', async (data) => {
         const { room, text, useMarkdown, replyTo, effect } = data;
-
-        // 【管理員指令攔截：登入】
-        if (text.startsWith('/admin login ')) {
-            // 安全性強化：使用 bcrypt 比對密碼 hash，而不是明文比對
-            const inputPassword = text.replace('/admin login ', '').trim();
-            const adminPasswordHash = process.env.ADMIN_PASSWORD_HASH;
-
-            if (!adminPasswordHash) {
-                socket.emit('chat message', { id: 'System', text: '❌ 伺服器未設定管理員密碼。', timestamp: Date.now() });
-                return;
-            }
-
-            const isMatch = await bcrypt.compare(inputPassword, adminPasswordHash);
-            if (isMatch) {
-                 socket.isAdmin = true;
-                 socket.emit('chat message', { id: 'System', text: '👑 歡迎回來，管理員！您現在可以使用 /announce 和 /admin logout 指令。', timestamp: Date.now() });
-            } else {
-                 socket.emit('chat message', { id: 'System', text: '❌ 密碼錯誤！', timestamp: Date.now() });
-            }
-            return; // 攔截訊息，不廣播
-        }
-
-        // 【管理員指令攔截：登出】
-        if (text.trim() === '/admin logout' && socket.isAdmin) {
-            socket.isAdmin = false;
-            socket.emit('chat message', { id: 'System', text: '👋 您已登出管理員身份。', timestamp: Date.now() });
-            return;
-        }
-
-        // 【管理員指令攔截：發布公告】
-        if (text.startsWith('/announce ')) {
-            if (!socket.isAdmin) {
-                socket.emit('chat message', { id: 'System', text: '❌ 您沒有管理員權限！請先登入。', timestamp: Date.now() });
-                return;
-            }
-            const payload = text.replace('/announce ', '');
-            const parts = payload.split('|');
-            if (parts.length >= 2) {
-                const newAnnounce = await Announcement.create({ title: parts[0].trim(), content: parts.slice(1).join('|').trim() });
-                io.emit('new announcement', newAnnounce); // 廣播給全伺服器
-                socket.emit('chat message', { id: 'System', text: '✅ 公告發布成功！大家已經收到了。', timestamp: Date.now() });
-            }
-            return; // 攔截訊息，不廣播
+        
+        // 【指令處理】檢查訊息是否為指令，若是則交由 command-handler 處理
+        // handleCommand 會回傳一個布林值，true 代表是指令且已處理，false 代表不是指令
+        const wasCommand = await handleCommand(socket, text);
+        if (wasCommand) {
+            return; // 如果是指令，就攔截訊息，不當作一般聊天內容廣播
         }
 
         // 【安全防護】檢查該使用者是否真的有成功加入這個房間（防止未輸入密碼者透過程式碼強行發送）
