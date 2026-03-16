@@ -1,4 +1,4 @@
-const CACHE_NAME = 'baha-cache-v5';
+const CACHE_NAME = 'baha-cache-v6';
 const urlsToCache = [
     '/',
     '/index.html',

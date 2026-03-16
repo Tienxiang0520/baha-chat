@@ -24,8 +24,10 @@
 
     <!-- 大廳畫面：用來顯示話題列表與建立話題 -->
     <div id="lobby-view" class="chat-container">
-        <header>
+        <header class="lobby-header">
+            <div style="width: 60px; visibility: hidden;"></div> <!-- 佔位平衡 -->
             <h1 data-i18n="lobby_title">Baha 話題大廳</h1>
+            <button id="features-btn" class="header-btn" data-i18n="features">功能</button>
         </header>
         
         <div id="room-form-container">
@@ -38,10 +40,59 @@
         <ul id="room-list"></ul>
     </div>
 
+    <!-- 功能選單畫面 -->
+    <div id="features-view" class="chat-container hidden">
+        <header class="chat-header">
+            <button id="back-from-features-btn" class="header-btn" data-i18n="back">⬅ 返回</button>
+            <h1 data-i18n="features_menu">功能選單</h1>
+            <div style="width: 60px; visibility: hidden;"></div> <!-- 佔位平衡 -->
+        </header>
+        <div class="features-content">
+            <button id="tutorial-btn" class="feature-menu-btn" data-i18n="command_tutorial">📖 指令教學</button>
+            <!-- 未來可以在這裡加入設定、個人首頁等按鈕 -->
+        </div>
+    </div>
+
+    <!-- 指令教學畫面 -->
+    <div id="tutorial-view" class="chat-container hidden">
+        <header class="chat-header">
+            <button id="back-from-tutorial-btn" class="header-btn" data-i18n="back">⬅ 返回</button>
+            <h1 data-i18n="command_tutorial">指令教學</h1>
+            <div style="width: 60px; visibility: hidden;"></div> <!-- 佔位平衡 -->
+        </header>
+        <div class="tutorial-content">
+            <h3 data-i18n="tut_text_format">📝 文字排版</h3>
+            <table class="tutorial-table">
+                <tr><th data-i18n="tut_effect">效果</th><th data-i18n="tut_syntax">語法</th></tr>
+                <tr><td data-i18n="tut_h1">一級標題</td><td><code># 文字</code></td></tr>
+                <tr><td data-i18n="tut_h2">二級標題</td><td><code>## 文字</code></td></tr>
+                <tr><td data-i18n="tut_h3">三級標題</td><td><code>### 文字</code></td></tr>
+                <tr><td data-i18n="tut_bold">粗體</td><td><code>**文字**</code></td></tr>
+                <tr><td data-i18n="tut_italic">斜體</td><td><code>*文字*</code></td></tr>
+                <tr><td data-i18n="tut_underline">底線</td><td><code>__文字__</code></td></tr>
+                <tr><td data-i18n="tut_strike">刪除線</td><td><code>~~文字~~</code></td></tr>
+                <tr><td data-i18n="tut_quote">引用</td><td><code>&gt; 文字</code></td></tr>
+                <tr><td data-i18n="tut_spoiler">防雷/隱藏</td><td><code>||文字||</code></td></tr>
+                <tr><td data-i18n="tut_code">單行程式碼</td><td><code>`文字`</code></td></tr>
+                <tr><td data-i18n="tut_code_block">多行程式碼</td><td><code>```<br>文字<br>```</code></td></tr>
+                <tr><td data-i18n="tut_encrypt">加密訊息</td><td><code>[lock:密碼]文字[/lock]</code></td></tr>
+            </table>
+
+            <h3 data-i18n="tut_interactive">🎉 互動指令</h3>
+            <ul class="tutorial-list">
+                <li><code>/party</code> : <span data-i18n="tut_party">全螢幕碎紙花</span></li>
+                <li><code>/quake</code> : <span data-i18n="tut_quake">全螢幕震動</span></li>
+                <li><code>/roll</code> : <span data-i18n="tut_roll">擲骰子 (1~100)</span></li>
+                <li><code>/canvas</code> : <span data-i18n="tut_canvas">建立共用畫布</span></li>
+                <li><code>/md</code> : <span data-i18n="tut_md">開關 Markdown</span></li>
+            </ul>
+        </div>
+    </div>
+
     <!-- 聊天室畫面：進入特定話題後顯示，預設隱藏 -->
     <div id="chat-view" class="chat-container hidden">
         <header class="chat-header">
-            <button id="back-btn" data-i18n="back_to_lobby">⬅ 返回大廳</button>
+            <button id="back-btn" class="header-btn" data-i18n="back_to_lobby">⬅ 返回大廳</button>
             <h1 id="room-title" data-i18n="room_title_default">話題標題</h1>
         </header>
         

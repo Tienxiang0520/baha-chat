@@ -63,11 +63,18 @@ body {
     box-shadow: 0 0 10px rgba(0,0,0,0.1);
 }
 
-header {
+.lobby-header {
+    display: flex;
+    align-items: center;
     background-color: #333;
     color: #fff;
     padding: 15px; /* 移除 safe-area，統一交由 container 處理 */
+}
+
+.lobby-header h1 {
+    flex-grow: 1;
     text-align: center;
+    font-size: 1.5rem;
 }
 
 .chat-header {
@@ -83,10 +90,9 @@ header {
     flex-grow: 1;
     font-size: 1.2rem;
     text-align: center;
-    margin-right: 80px; /* 平衡左側返回按鈕佔用的空間，讓標題置中 */
 }
 
-#back-btn {
+.header-btn {
     background: rgba(255, 255, 255, 0.2);
     color: white;
     border: none;
@@ -95,9 +101,10 @@ header {
     padding: 8px 12px;
     border-radius: 8px;
     transition: background 0.2s;
+    width: auto;
 }
 
-#back-btn:hover {
+.header-btn:hover {
     background: rgba(255, 255, 255, 0.4);
 }
 
@@ -669,6 +676,78 @@ header {
 
 @keyframes fall {
     to { transform: translateY(100dvh) rotate(720deg); }
+}
+
+/* ===== 功能選單與教學頁面樣式 ===== */
+.features-content, .tutorial-content {
+    padding: 20px;
+    flex-grow: 1;
+    overflow-y: auto;
+    background-color: #f8f9fa;
+}
+
+.feature-menu-btn {
+    width: 100%;
+    padding: 15px;
+    font-size: 1.1rem;
+    font-weight: bold;
+    color: #333;
+    background-color: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    text-align: left;
+    margin-bottom: 10px;
+}
+
+.feature-menu-btn:hover {
+    background-color: #e2e6ea;
+}
+
+.tutorial-content h3 {
+    margin-top: 20px;
+    margin-bottom: 10px;
+    color: #0084ff;
+    border-bottom: 2px solid #0084ff;
+    padding-bottom: 5px;
+    display: inline-block;
+}
+
+.tutorial-content h3:first-child {
+    margin-top: 0;
+}
+
+.tutorial-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+    font-size: 0.9rem;
+    background-color: #fff;
+}
+
+.tutorial-table th, .tutorial-table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+}
+
+.tutorial-table th {
+    background-color: #f0f2f5;
+}
+
+.tutorial-list {
+    list-style-type: none;
+    padding-left: 0;
+}
+
+.tutorial-list li {
+    background-color: #fff;
+    margin-bottom: 5px;
+    padding: 10px;
+    border-radius: 6px;
+    border-left: 4px solid #0084ff;
+    border: 1px solid #ddd;
 }
 
 /* ===== 密碼訊息樣式 ===== */

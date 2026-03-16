@@ -4,11 +4,17 @@ const socket = io();
 const loadingOverlay = document.getElementById('loading-overlay');
 const lobbyView = document.getElementById('lobby-view');
 const chatView = document.getElementById('chat-view');
+const featuresView = document.getElementById('features-view');
+const tutorialView = document.getElementById('tutorial-view');
 const roomList = document.getElementById('room-list');
 const roomInput = document.getElementById('room-input');
 const createRoomBtn = document.getElementById('create-room-btn');
 const searchInput = document.getElementById('search-input');
 const backBtn = document.getElementById('back-btn');
+const featuresBtn = document.getElementById('features-btn');
+const backFromFeaturesBtn = document.getElementById('back-from-features-btn');
+const tutorialBtn = document.getElementById('tutorial-btn');
+const backFromTutorialBtn = document.getElementById('back-from-tutorial-btn');
 const roomTitle = document.getElementById('room-title');
 const danmakuContainer = document.getElementById('danmaku-container');
 const contextMenu = document.getElementById('message-context-menu');
@@ -29,6 +35,27 @@ let messageTimestamps = []; // 紀錄訊息抵達的時間以計算頻率
 const DANMAKU_THRESHOLD = 10; // 觸發彈幕模式的門檻 (條/秒)
 let isMarkdownEnabled = true; // 紀錄是否啟用 Markdown
 let replyingTo = null; // 紀錄目前正在回覆的訊息資料
+
+// ===== 畫面切換邏輯 =====
+featuresBtn.addEventListener('click', () => {
+    lobbyView.classList.add('hidden');
+    featuresView.classList.remove('hidden');
+});
+
+backFromFeaturesBtn.addEventListener('click', () => {
+    featuresView.classList.add('hidden');
+    lobbyView.classList.remove('hidden');
+});
+
+tutorialBtn.addEventListener('click', () => {
+    featuresView.classList.add('hidden');
+    tutorialView.classList.remove('hidden');
+});
+
+backFromTutorialBtn.addEventListener('click', () => {
+    tutorialView.classList.add('hidden');
+    featuresView.classList.remove('hidden');
+});
 
 // ===== 互動選單相關狀態與事件 =====
 let selectedMessageText = '';
