@@ -848,3 +848,18 @@ body {
 #messages li.my-message .locked-header {
     color: #fff;
 }
+
+/* ===== 自訂捲軸樣式 (美化 Windows/Linux 預設的粗糙捲軸) ===== */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 10px;
+}

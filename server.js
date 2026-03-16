@@ -59,7 +59,7 @@ app.use(express.static('public'));
 // 取得並排序房間列表的輔助函式
 const getSortedRoomList = async () => {
     // 從資料庫撈取所有房間，並依建立時間反向排序
-    const dbRooms = await Room.find().sort({ createdAt: -1 });
+    const dbRooms = await Room.find().sort({ createdAt: -1 }).limit(100); // 加上 limit 避免未來資料量過大導致效能崩潰
     const roomList = dbRooms.map(room => {
         const roomData = io.sockets.adapter.rooms.get(room.name);
         const userCount = roomData ? roomData.size : 0;
@@ -222,11 +222,16 @@ io.on('connection', async (socket) => {
 
         const existingRoom = await Room.findOne({ name: room });
         if (existingRoom) {
-            // 將新訊息存入資料庫，永久保存
-            await Message.create({ roomName: room, ...messageData });
-            
-            // 只將訊息廣播給在同一個房間的使用者
-            io.to(room).emit('chat message', messageData);
+            try {
+                // 將新訊息存入資料庫，永久保存
+                await Message.create({ roomName: room, ...messageData });
+                
+                // 只將訊息廣播給在同一個房間的使用者
+                io.to(room).emit('chat message', messageData);
+            } catch (err) {
+                console.error('儲存訊息發生錯誤:', err);
+                socket.emit('chat message', { id: 'System', text: '❌ 系統錯誤，訊息傳送失敗。', timestamp: Date.now() });
+            }
         }
     });
 
