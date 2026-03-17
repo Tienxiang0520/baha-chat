@@ -79,7 +79,8 @@ const translations = {
         sponsor_email_action: '發送贊助信',
         sponsor_thanks: '每一份支持都會讓 Baha 更穩定，感謝你的陪伴 💕',
         sponsor_copied: '已複製贊助信箱',
-        sponsor_paypal_action: '透過 PayPal 贊助'
+        sponsor_paypal_action: '透過 PayPal 贊助',
+        sponsor_paypal_hint: '愛心贊助 NT$30 元'
     },
     'zh-CN': {
         connecting: '连接中...',
@@ -160,7 +161,8 @@ const translations = {
         sponsor_email_action: '发送赞助信',
         sponsor_thanks: '每一份支持都会让 Baha 更稳定，感谢与你并肩前行 💕',
         sponsor_copied: '已复制赞助邮箱',
-        sponsor_paypal_action: '通过 PayPal 赞助'
+        sponsor_paypal_action: '通过 PayPal 赞助',
+        sponsor_paypal_hint: '爱心赞助 NT$30 元'
     },
     'en': {
         connecting: 'Connecting...',
@@ -241,7 +243,8 @@ const translations = {
         sponsor_email_action: 'Send Sponsor Email',
         sponsor_thanks: 'Every contribution keeps Baha stable—thank you for being here 💕',
         sponsor_copied: 'Sponsor email copied',
-        sponsor_paypal_action: 'Donate via PayPal'
+        sponsor_paypal_action: 'Donate via PayPal',
+        sponsor_paypal_hint: 'Heart support NT$30'
     },
     'ja': {
         connecting: '接続中...',
@@ -322,7 +325,8 @@ const translations = {
         sponsor_email_action: '支援メールを送る',
         sponsor_thanks: '皆様の支援が安定運用につながります。ありがとうございます 💕',
         sponsor_copied: 'メールアドレスをコピーしました',
-        sponsor_paypal_action: 'PayPal で支援する'
+        sponsor_paypal_action: 'PayPal で支援する',
+        sponsor_paypal_hint: 'ハート支援 NT$30'
     },
     'ko': {
         connecting: '연결 중...',
@@ -403,7 +407,8 @@ const translations = {
         sponsor_email_action: '후원 이메일 보내기',
         sponsor_thanks: '여러분의 후원이 Baha를 안정적으로 유지합니다. 감사합니다 💕',
         sponsor_copied: '이메일 주소가 복사되었습니다',
-        sponsor_paypal_action: 'PayPal 로 후원하기'
+        sponsor_paypal_action: 'PayPal 로 후원하기',
+        sponsor_paypal_hint: '하트 후원 NT$30'
     },
     'vi': {
         connecting: 'Đang kết nối...',
@@ -484,6 +489,7 @@ const translations = {
         sponsor_email_action: 'Gửi email ủng hộ',
         sponsor_thanks: 'Mỗi đóng góp giúp Baha hoạt động ổn định. Cảm ơn bạn 💕',
         sponsor_copied: 'Đã sao chép email hỗ trợ',
-        sponsor_paypal_action: 'Ủng hộ qua PayPal'
+        sponsor_paypal_action: 'Ủng hộ qua PayPal',
+        sponsor_paypal_hint: 'Ủng hộ trái tim NT$30'
     }
 };

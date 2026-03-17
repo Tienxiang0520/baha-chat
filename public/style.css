@@ -773,6 +773,12 @@ body {
     background-color: rgba(0, 132, 255, 0.1);
 }
 
+.sponsor-paypal-hint {
+    font-size: 0.9rem;
+    color: #333;
+    text-align: center;
+}
+
 .sponsor-note {
     font-size: 0.9rem;
     color: #555;
