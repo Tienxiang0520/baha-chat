@@ -705,6 +705,98 @@ body {
     background-color: #e2e6ea;
 }
 
+.sponsor-content {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.sponsor-card {
+    background-color: #fff;
+    border: 1px solid #ddd;
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+}
+
+.sponsor-card__label {
+    font-size: 0.85rem;
+    color: #666;
+    margin-bottom: 4px;
+}
+
+.sponsor-card__value {
+    font-weight: 600;
+    font-size: 1.1rem;
+    color: #222;
+    word-break: break-all;
+}
+
+.sponsor-card__actions {
+    margin-top: 12px;
+    display: flex;
+    gap: 10px;
+}
+
+.sponsor-copy-btn,
+.sponsor-link {
+    flex: 1;
+    border-radius: 20px;
+    padding: 10px 14px;
+    text-align: center;
+    font-weight: bold;
+    cursor: pointer;
+    border: none;
+    font-size: 0.95rem;
+}
+
+.sponsor-copy-btn {
+    background-color: #0084ff;
+    color: #fff;
+}
+
+.sponsor-copy-btn:hover {
+    background-color: #0070dd;
+}
+
+.sponsor-link {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    border: 1px solid #0084ff;
+    color: #0084ff;
+    text-decoration: none;
+    background-color: transparent;
+}
+
+.sponsor-link:hover {
+    background-color: rgba(0, 132, 255, 0.1);
+}
+
+.sponsor-note {
+    font-size: 0.9rem;
+    color: #555;
+    line-height: 1.5;
+}
+
+.sponsor-paypal-link {
+    display: block;
+    margin-top: 10px;
+    padding: 12px;
+    border-radius: 999px;
+    border: 1px solid #ffc439;
+    background: linear-gradient(135deg, #ffc439, #ffb347);
+    color: #382b16;
+    text-align: center;
+    font-weight: bold;
+    text-decoration: none;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
+}
+
+.sponsor-paypal-link:hover {
+    opacity: 0.9;
+}
+
 .tutorial-content h3 {
     margin-top: 20px;
     margin-bottom: 10px;

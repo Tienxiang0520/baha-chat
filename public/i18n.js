@@ -69,7 +69,17 @@ const translations = {
         announcements_title: '系統公告',
         tut_text: '文字',
         tut_password: '密碼',
-        tut_topic_name: '話題名'
+        tut_topic_name: '話題名',
+        sponsor_button: '贊助 Baha',
+        sponsor_page_title: '贊助 Baha',
+        sponsor_section_title: '支持開發',
+        sponsor_intro: '若你喜歡 Baha，歡迎透過下方方式補貼伺服器與開發成本。',
+        sponsor_email_label: '聯絡信箱',
+        sponsor_copy_email: '複製信箱',
+        sponsor_email_action: '發送贊助信',
+        sponsor_thanks: '每一份支持都會讓 Baha 更穩定，感謝你的陪伴 💕',
+        sponsor_copied: '已複製贊助信箱',
+        sponsor_paypal_action: '透過 PayPal 贊助'
     },
     'zh-CN': {
         connecting: '连接中...',
@@ -140,7 +150,17 @@ const translations = {
         announcements_title: '系统公告',
         tut_text: '文字',
         tut_password: '密码',
-        tut_topic_name: '话题名'
+        tut_topic_name: '话题名',
+        sponsor_button: '赞助 Baha',
+        sponsor_page_title: '赞助 Baha',
+        sponsor_section_title: '支持开发',
+        sponsor_intro: '如果你喜欢 Baha，欢迎通过以下方式补贴服务器与开发成本。',
+        sponsor_email_label: '联系邮箱',
+        sponsor_copy_email: '复制邮箱',
+        sponsor_email_action: '发送赞助信',
+        sponsor_thanks: '每一份支持都会让 Baha 更稳定，感谢与你并肩前行 💕',
+        sponsor_copied: '已复制赞助邮箱',
+        sponsor_paypal_action: '通过 PayPal 赞助'
     },
     'en': {
         connecting: 'Connecting...',
@@ -211,7 +231,17 @@ const translations = {
         announcements_title: 'System Announcements',
         tut_text: 'text',
         tut_password: 'password',
-        tut_topic_name: 'Topic_Name'
+        tut_topic_name: 'Topic_Name',
+        sponsor_button: 'Support Baha',
+        sponsor_page_title: 'Support Baha',
+        sponsor_section_title: 'Keep the project running',
+        sponsor_intro: 'If you enjoy Baha, feel free to help cover hosting and development costs via the email below.',
+        sponsor_email_label: 'Contact Email',
+        sponsor_copy_email: 'Copy Email',
+        sponsor_email_action: 'Send Sponsor Email',
+        sponsor_thanks: 'Every contribution keeps Baha stable—thank you for being here 💕',
+        sponsor_copied: 'Sponsor email copied',
+        sponsor_paypal_action: 'Donate via PayPal'
     },
     'ja': {
         connecting: '接続中...',
@@ -282,7 +312,17 @@ const translations = {
         announcements_title: 'システムお知らせ',
         tut_text: 'テキスト',
         tut_password: 'パスワード',
-        tut_topic_name: 'トピック名'
+        tut_topic_name: 'トピック名',
+        sponsor_button: 'Baha を支援',
+        sponsor_page_title: 'Baha を支援',
+        sponsor_section_title: '開発サポート',
+        sponsor_intro: 'Baha を気に入ったら以下のメールから支援いただけると嬉しいです。',
+        sponsor_email_label: '連絡用メール',
+        sponsor_copy_email: 'メールをコピー',
+        sponsor_email_action: '支援メールを送る',
+        sponsor_thanks: '皆様の支援が安定運用につながります。ありがとうございます 💕',
+        sponsor_copied: 'メールアドレスをコピーしました',
+        sponsor_paypal_action: 'PayPal で支援する'
     },
     'ko': {
         connecting: '연결 중...',
@@ -353,7 +393,17 @@ const translations = {
         announcements_title: '시스템 공지',
         tut_text: '텍스트',
         tut_password: '비밀번호',
-        tut_topic_name: '주제명'
+        tut_topic_name: '주제명',
+        sponsor_button: 'Baha 후원',
+        sponsor_page_title: 'Baha 후원',
+        sponsor_section_title: '개발 지원',
+        sponsor_intro: 'Baha가 마음에 든다면 아래 이메일로 후원해 주세요.',
+        sponsor_email_label: '연락 이메일',
+        sponsor_copy_email: '이메일 복사',
+        sponsor_email_action: '후원 이메일 보내기',
+        sponsor_thanks: '여러분의 후원이 Baha를 안정적으로 유지합니다. 감사합니다 💕',
+        sponsor_copied: '이메일 주소가 복사되었습니다',
+        sponsor_paypal_action: 'PayPal 로 후원하기'
     },
     'vi': {
         connecting: 'Đang kết nối...',
@@ -424,6 +474,16 @@ const translations = {
         announcements_title: 'Thông báo hệ thống',
         tut_text: 'văn_bản',
         tut_password: 'mật_khẩu',
-        tut_topic_name: 'Tên_Chủ_Đề'
+        tut_topic_name: 'Tên_Chủ_Đề',
+        sponsor_button: 'Ủng hộ Baha',
+        sponsor_page_title: 'Ủng hộ Baha',
+        sponsor_section_title: 'Hỗ trợ phát triển',
+        sponsor_intro: 'Nếu bạn thích Baha, hãy ủng hộ chi phí máy chủ và phát triển qua email bên dưới.',
+        sponsor_email_label: 'Email liên hệ',
+        sponsor_copy_email: 'Sao chép email',
+        sponsor_email_action: 'Gửi email ủng hộ',
+        sponsor_thanks: 'Mỗi đóng góp giúp Baha hoạt động ổn định. Cảm ơn bạn 💕',
+        sponsor_copied: 'Đã sao chép email hỗ trợ',
+        sponsor_paypal_action: 'Ủng hộ qua PayPal'
     }
 };

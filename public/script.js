@@ -21,6 +21,11 @@ const announcementBtn = document.getElementById('announcement-btn');
 const backFromAnnouncementBtn = document.getElementById('back-from-announcement-btn');
 const featuresDot = document.getElementById('features-dot');
 const announcementDot = document.getElementById('announcement-dot');
+const sponsorBtn = document.getElementById('sponsor-btn');
+const sponsorView = document.getElementById('sponsor-view');
+const backFromSponsorBtn = document.getElementById('back-from-sponsor-btn');
+const sponsorCopyEmailBtn = document.getElementById('sponsor-copy-email');
+const sponsorEmailValue = document.getElementById('sponsor-email-value');
 const roomTitle = document.getElementById('room-title');
 const danmakuContainer = document.getElementById('danmaku-container');
 const contextMenu = document.getElementById('message-context-menu');
@@ -68,6 +73,17 @@ announcementBtn.addEventListener('click', () => {
     featuresView.classList.add('hidden');
     announcementView.classList.remove('hidden');
     announcementDot.classList.add('hidden'); // 點開公告列表時消除紅點
+});
+
+sponsorBtn.addEventListener('click', () => {
+    featuresView.classList.add('hidden');
+    sponsorView.classList.remove('hidden');
+    featuresDot.classList.add('hidden');
+});
+
+backFromSponsorBtn.addEventListener('click', () => {
+    sponsorView.classList.add('hidden');
+    featuresView.classList.remove('hidden');
 });
 
 backFromAnnouncementBtn.addEventListener('click', () => {
@@ -123,6 +139,20 @@ cancelReplyBtn.addEventListener('click', () => {
     replyingTo = null;
     replyPreview.classList.add('hidden');
 });
+
+if (sponsorCopyEmailBtn) {
+    sponsorCopyEmailBtn.addEventListener('click', async () => {
+        const email = sponsorEmailValue?.textContent?.trim();
+        if (!email) return;
+
+        try {
+            await copyToClipboard(email);
+            addSystemMessage(t.sponsor_copied || 'Sponsor email copied');
+        } catch (error) {
+            console.error('贊助信箱複製失敗', error);
+        }
+    });
+}
 // ===============================
 
 // 自動偵測瀏覽器語言
@@ -209,6 +239,22 @@ function escapeHTML(str) {
             '"': '&quot;'
         }[tag] || tag)
     );
+}
+
+async function copyToClipboard(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        return navigator.clipboard.writeText(text);
+    }
+
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.setAttribute('readonly', '');
+    textarea.style.position = 'absolute';
+    textarea.style.left = '-9999px';
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand('copy');
+    textarea.remove();
 }
 
 /**
