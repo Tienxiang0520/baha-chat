@@ -45,6 +45,8 @@ Baha is a real-time anonymous text chat platform built with Node.js and Socket.i
 
 ## 📝 Supported Markdown Formatting Commands
 
+Note that the client renders Markdown via `markdown-it` and sanitizes the resulting HTML with `DOMPurify`, so you can use heading, code, spoiler, and other Discord-style formatting safely right in the chat input.
+
 | Effect | Syntax | Example |
 | :--- | :--- | :--- |
 | Heading 1 | `# text` | `# Main Heading` |
