@@ -9,7 +9,7 @@ Baha is a real-time anonymous text chat platform built with Node.js and Socket.i
 
 ## ✨ Core Features
 
-- **Completely Anonymous**: The system automatically assigns a random short ID (e.g., `[aB3x9Z]`) to each connected user, and generates an exclusive fixed display color for each ID via a hash algorithm.
+- **Completely Anonymous**: The system automatically assigns a random short ID (8~10 characters) to each connected user, and generates an exclusive fixed display color for each ID via a hash algorithm; the ID is stored in the browser’s localStorage so it survives page reloads and short reconnects until cache is cleared.
 - **Multi-language Support (i18n)**: Automatically detects browser language, providing Traditional Chinese, Simplified Chinese, English, Japanese, Korean, and Vietnamese interfaces.
 - **PWA Desktop Installation**: Perfectly adapts to mobile notches and bottom safe areas. Supports direct installation to mobile and desktop home screens for a native app-like fullscreen experience.
 - **Dynamic Topic Lobby**:

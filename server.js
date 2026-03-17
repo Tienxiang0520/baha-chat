@@ -13,6 +13,8 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
+const VALID_USER_ID = /^[A-Za-z0-9]{8,10}$/;
+
 // 設定 Email 發送器 (需在 Render 設定環境變數 EMAIL_USER 和 EMAIL_PASS)
 const transporter = nodemailer.createTransport({
     service: 'gmail',
@@ -114,8 +116,11 @@ async function fetchLinkPreview(text) {
 
 // 監聽使用者的 Socket.io 連線
 io.on('connection', async (socket) => {
-    // 取 socket.id 的前 6 個字元作為匿名使用者的隨機 ID
-    const userId = socket.id.substring(0, 6);
+    const requestedId = socket.handshake?.auth?.userId;
+    const userId = (typeof requestedId === 'string' && VALID_USER_ID.test(requestedId))
+        ? requestedId
+        : socket.id.substring(0, 6);
+    socket.userId = userId;
     socket.isAdmin = false; // 預設為一般使用者
     socket.loginAttempts = 0; // 初始化登入嘗試次數
     socket.lockoutUntil = null; // 初始化鎖定時間
@@ -218,7 +223,7 @@ io.on('connection', async (socket) => {
         
         // 檢查並抓取網址摘要
         const preview = await fetchLinkPreview(text);
-        const messageData = { id: userId, text: text, timestamp: Date.now(), useMarkdown: useMarkdown, replyTo: replyTo, effect: effect, linkPreview: preview };
+        const messageData = { id: socket.userId, text: text, timestamp: Date.now(), useMarkdown: useMarkdown, replyTo: replyTo, effect: effect, linkPreview: preview };
 
         const existingRoom = await Room.findOne({ name: room });
         if (existingRoom) {

@@ -1,5 +1,28 @@
+const USER_ID_STORAGE_KEY = 'baha-user-id';
+
+function generateRandomUserId() {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    const length = Math.floor(Math.random() * 3) + 8; // 8 ~ 10
+    let id = '';
+    for (let i = 0; i < length; i++) {
+        id += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return id;
+}
+
+function getOrCreateUserId() {
+    const existing = localStorage.getItem(USER_ID_STORAGE_KEY);
+    if (existing && /^[A-Za-z0-9]{8,10}$/.test(existing)) {
+        return existing;
+    }
+    const newId = generateRandomUserId();
+    localStorage.setItem(USER_ID_STORAGE_KEY, newId);
+    return newId;
+}
+
+const localUserId = getOrCreateUserId();
 // 初始化 Socket.io 連線
-const socket = io();
+const socket = io({ auth: { userId: localUserId } });
 
 const loadingOverlay = document.getElementById('loading-overlay');
 const lobbyView = document.getElementById('lobby-view');
@@ -337,7 +360,7 @@ window.unlockMessage = function(btnElement, correctPassword, encodedContent) {
  */
 function addMessage(data, skipScroll = false) {
     const item = document.createElement('li');
-    const isMyMessage = socket.id && data.id === socket.id.substring(0, 6);
+    const isMyMessage = data.id === localUserId;
 
     if (isMyMessage) {
         item.classList.add('my-message');
