@@ -260,86 +260,57 @@ async function copyToClipboard(text) {
 /**
  * 輕量級 Markdown 解析器 (支援 Discord 常用語法)
  */
+function escapeHTML(str) {
+    return str.replace(/[&<>'"]/g, 
+        tag => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            "'": '&#39;',
+            '"': '&quot;'
+        }[tag] || tag)
+    );
+}
+
+const markdownParser = window.markdownit?.({
+    html: false,
+    linkify: true,
+    typographer: true
+});
+
 function parseMarkdown(text) {
-    let parsed = escapeHTML(text); // 1. 先跳脫 HTML 標籤，確保安全
+    if (!markdownParser || typeof DOMPurify === 'undefined') {
+        return escapeHTML(text);
+    }
 
-    // 2. 提取 Code Blocks (```) 與 Inline Code (`)，避免裡面的內容被後面的正則格式化
-    const codeBlocks = [];
-    parsed = parsed.replace(/```([\s\S]*?)```/g, (match, p1) => {
-        codeBlocks.push(`<pre><code>${p1}</code></pre>`);
-        return `__CODE_BLOCK_${codeBlocks.length - 1}__`;
-    });
-    parsed = parsed.replace(/`([^`\n]+)`/g, (match, p1) => {
-        codeBlocks.push(`<code>${p1}</code>`);
-        return `__CODE_BLOCK_${codeBlocks.length - 1}__`;
-    });
-
-    // 處理加密訊息 [lock:密碼]內容[/lock]
-    parsed = parsed.replace(/\[lock:(.*?)\]([\s\S]*?)\[\/lock\]/g, (match, password, content) => {
+    const lockPlaceholders = [];
+    const preparedText = text.replace(/\[lock:(.*?)\]([\s\S]*?)\[\/lock\]/g, (match, password, content) => {
         const encodedContent = encodeURIComponent(content);
-        return `<div class="locked-message-container">
+        const placeholder = `__LOCKED_${lockPlaceholders.length}__`;
+        lockPlaceholders.push({ placeholder, password, encodedContent });
+        return placeholder;
+    });
+
+    try {
+        const rawHtml = markdownParser.render(preparedText);
+        let sanitized = DOMPurify.sanitize(rawHtml);
+
+        lockPlaceholders.forEach(({ placeholder, password, encodedContent }) => {
+            const lockedHtml = `<div class="locked-message-container">
                     <div class="locked-header">${t.locked_message}</div>
                     <div class="locked-body">
                         <input type="password" class="unlock-input" placeholder="${t.enter_password}">
                         <button class="unlock-btn" onclick="unlockMessage(this, '${password}', '${encodedContent}')">${t.unlock}</button>
                     </div>
                 </div>`;
-    });
+            sanitized = sanitized.replace(placeholder, lockedHtml);
+        });
 
-    // 3. 處理自動連結與多媒體預覽 (Auto-linking & Multimedia Preview)
-    parsed = parsed.replace(/(https?:\/\/[^\s]+)/g, (match, url) => {
-        // 判斷是否為 YouTube 網址，擷取 11 碼的影片 ID
-        const ytMatch = url.match(/(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/i);
-        if (ytMatch && ytMatch[1]) {
-            const videoId = ytMatch[1];
-            return `<iframe class="chat-youtube-preview" src="https://www.youtube.com/embed/${videoId}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
-        }
-
-        // 判斷是否為 Google Drive 網址，轉換為直接下載連結
-        const gdriveMatch = url.match(/drive\.google\.com\/(?:file\/d\/|open\?id=)([a-zA-Z0-9_-]+)/i);
-        if (gdriveMatch && gdriveMatch[1]) {
-            const fileId = gdriveMatch[1];
-            const downloadUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
-            return `<a href="${downloadUrl}" target="_blank" rel="noopener noreferrer" class="chat-drive-link">${t.drive_download}</a>`;
-        }
-
-        // 判斷網址是否為常見的圖片格式結尾 (支援網址後方帶有參數 ?xxx)
-        if (/\.(png|jpe?g|gif|webp)(\?.*)?$/i.test(url)) {
-            return `<a href="${url}" target="_blank" rel="noopener noreferrer"><img src="${url}" class="chat-image-preview" alt="圖片預覽" loading="lazy" /></a>`;
-        }
-
-        // 判斷網址是否為常見的影片格式
-        if (/\.(mp4|webm|mov)(\?.*)?$/i.test(url)) {
-            return `<video controls class="chat-video-preview" src="${url}" preload="metadata" playsinline></video>`;
-        }
-
-        // 判斷網址是否為常見的音檔格式
-        if (/\.(mp3|wav|m4a|ogg)(\?.*)?$/i.test(url)) {
-            return `<audio controls class="chat-audio-preview" src="${url}" preload="metadata"></audio>`;
-        }
-
-        // 一般網址
-        return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="chat-link">${url}</a>`;
-    });
-
-    // 4. 處理其他格式
-    parsed = parsed.replace(/^###\s*(.*)$/gm, '<h3>$1</h3>'); // 三級標題 (放寬限制：允許不加空格)
-    parsed = parsed.replace(/^##\s*(.*)$/gm, '<h2>$1</h2>'); // 二級標題 (放寬限制：允許不加空格)
-    parsed = parsed.replace(/^#\s*(.*)$/gm, '<h1>$1</h1>'); // 一級標題 (放寬限制：允許不加空格)
-    parsed = parsed.replace(/\|\|(.*?)\|\|/g, '<span class="spoiler" onclick="this.classList.toggle(\'revealed\')">$1</span>'); // 防雷線
-    parsed = parsed.replace(/\*\*([^*_]+)\*\*/g, '<strong>$1</strong>'); // 粗體
-    parsed = parsed.replace(/\*([^*_]+)\*/g, '<em>$1</em>'); // 斜體
-    parsed = parsed.replace(/__([^_]+)__/g, '<u>$1</u>'); // 底線
-    parsed = parsed.replace(/~~([^~]+)~~/g, '<del>$1</del>'); // 刪除線
-    // 因為前面已經執行了 escapeHTML，所以 > 會變成 &gt;
-    parsed = parsed.replace(/^&gt;\s?(.*)$/gm, '<blockquote>$1</blockquote>'); // 引用
-
-    // 5. 把 Code Blocks 放回去
-    codeBlocks.forEach((block, i) => {
-        parsed = parsed.replace(`__CODE_BLOCK_${i}__`, block);
-    });
-
-    return parsed;
+        return sanitized;
+    } catch (error) {
+        console.error('Markdown render failed', error);
+        return escapeHTML(text);
+    }
 }
 
 /**
@@ -704,10 +675,13 @@ socket.on('room list', (rooms) => {
 // 處理表單提交
 form.addEventListener('submit', function(e) {
     e.preventDefault(); // 防止頁面重新整理
-    const text = input.value.trim();
+    const text = input.value;
+    const trimmedText = text.trim();
     
+    if (trimmedText.length === 0) return;
+
     // 檢查是否為 Markdown 切換指令
-    if (text === '/md') {
+    if (trimmedText === '/md') {
         isMarkdownEnabled = !isMarkdownEnabled;
         addSystemMessage(isMarkdownEnabled ? t.system_md_on : t.system_md_off);
         input.value = ''; // 清空輸入框
