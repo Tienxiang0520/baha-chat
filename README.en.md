@@ -68,6 +68,15 @@ Baha is a real-time anonymous text chat platform built with Node.js and Socket.i
 - `/party [text]`: Fullscreen confetti explosion, perfect for celebrations or welcoming!
 - `/quake [text]`: Fullscreen severe shaking, great for expressing shock or excitement!
 
+## 💝 Support Baha
+
+If you enjoy this anonymous room, you can keep it alive through:
+
+- Email `pudding050@gmail.com` and mention your sponsorship intent so I can respond and log it.
+- PayPal “Love Support” NT$30 → [https://www.paypal.com/ncp/payment/VADFCCNV65CQQ](https://www.paypal.com/ncp/payment/VADFCCNV65CQQ)
+
+Every contribution helps keep the project stable—thanks for being here 💕
+
 ## 🚀 Local Installation & Execution
 
 ```bash
