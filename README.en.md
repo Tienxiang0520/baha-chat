@@ -74,6 +74,7 @@ The Markdown stack now layers on three plugin families:
 - `/roll [text]`: Roll a random number from 1 to 100, great for drawing lots or comparing sizes!
 - `/party [text]`: Fullscreen confetti explosion, perfect for celebrations or welcoming!
 - `/quake [text]`: Fullscreen severe shaking, great for expressing shock or excitement!
+- `/poll <question> | <option1> | <option2> [...]`: Start a poll inside the room, which renders a live vote card; everyone’s clicks immediately update the counts.
 
 ## 💝 Support Baha
 

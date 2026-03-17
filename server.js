@@ -8,6 +8,7 @@ const bcrypt = require('bcrypt');
 const { MongoMemoryServer } = require('mongodb-memory-server');
 const { handleCommand } = require('./command-handler');
 const { LOAD_HISTORY_LIMIT } = require('./config');
+const { getPoll, votePoll } = require('./polls');
 
 const app = express();
 const server = http.createServer(app);
@@ -238,6 +239,22 @@ io.on('connection', async (socket) => {
                 socket.emit('chat message', { id: 'System', text: '❌ 系統錯誤，訊息傳送失敗。', timestamp: Date.now() });
             }
         }
+    });
+
+    // 監聽投票事件
+    socket.on('poll vote', (data) => {
+        const { pollId, optionIndex } = data || {};
+        if (!pollId || typeof optionIndex !== 'number') return;
+        const poll = getPoll(pollId);
+        if (!poll || !poll.room || !socket.rooms.has(poll.room)) return;
+
+        const updatedPoll = votePoll(pollId, socket.userId, optionIndex);
+        if (!updatedPoll) return;
+
+        socket.server.to(poll.room).emit('poll update', {
+            pollId: updatedPoll.id,
+            options: updatedPoll.options.map(option => ({ text: option.text, count: option.count }))
+        });
     });
 
     // 監聽使用者斷線

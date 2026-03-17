@@ -846,6 +846,56 @@ body {
     background-color: rgba(40, 167, 69, 0.12);
 }
 
+.poll-card {
+    border-radius: 12px;
+    background: linear-gradient(135deg, rgba(0, 132, 255, 0.08), rgba(255, 255, 255, 0.95));
+    border: 1px solid #0084ff;
+    padding: 14px;
+    margin-top: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.poll-card__question {
+    font-weight: bold;
+    color: #003366;
+}
+.poll-card__options {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 10px;
+}
+.poll-option-btn {
+    border: none;
+    border-radius: 8px;
+    padding: 10px;
+    font-weight: bold;
+    background-color: rgba(255, 255, 255, 0.9);
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    transition: transform 0.15s, box-shadow 0.15s, background-color 0.15s;
+}
+.poll-option-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 5px 10px rgba(0,0,0,0.1);
+}
+.poll-option-btn.selected {
+    background-color: #0084ff;
+    color: white;
+}
+.poll-option-btn.selected .poll-option-count {
+    color: white;
+}
+.poll-option-count {
+    font-size: 0.9rem;
+    color: #666;
+    min-width: 32px;
+    text-align: right;
+}
+
 .sponsor-paypal-link {
     display: block;
     margin-top: 10px;

@@ -60,6 +60,8 @@ const replyPreviewText = document.getElementById('reply-preview-text');
 const cancelReplyBtn = document.getElementById('cancel-reply-btn');
 const swUpdateBanner = document.getElementById('sw-update-banner');
 const swUpdateButton = document.getElementById('sw-update-btn');
+const pollElements = new Map();
+const pollVotes = new Map();
 
 const form = document.getElementById('form');
 const input = document.getElementById('input');
@@ -476,6 +478,37 @@ function addMessage(data, skipScroll = false) {
         item.appendChild(previewCard);
     }
 
+    if (data.poll) {
+        const pollCard = document.createElement('div');
+        pollCard.className = 'poll-card';
+
+        const title = document.createElement('div');
+        title.className = 'poll-card__question';
+        title.textContent = data.poll.question;
+        pollCard.appendChild(title);
+
+        const optionsContainer = document.createElement('div');
+        optionsContainer.className = 'poll-card__options';
+
+        const optionButtons = data.poll.options.map((option, index) => {
+            const btn = document.createElement('button');
+            btn.className = 'poll-option-btn';
+            btn.innerHTML = `<span>${escapeHTML(option.text)}</span><span class="poll-option-count">${option.count}</span>`;
+            btn.addEventListener('click', () => {
+                pollVotes.set(data.poll.id, index);
+                socket.emit('poll vote', { pollId: data.poll.id, optionIndex: index });
+                highlightPollSelection(data.poll.id);
+            });
+            optionsContainer.appendChild(btn);
+            return btn;
+        });
+
+        pollCard.appendChild(optionsContainer);
+        item.appendChild(pollCard);
+        pollElements.set(data.poll.id, { buttons: optionButtons });
+        highlightPollSelection(data.poll.id);
+    }
+
     // 4. 如果訊息有時間戳記，則格式化並顯示
     if (data.timestamp) {
         const timeSpan = document.createElement('span');
@@ -802,8 +835,8 @@ socket.on('chat message', function(data) {
         triggerPartyEffect();
     }
 
-    const now = Date.now();
-    messageTimestamps.push(now);
+const now = Date.now();
+messageTimestamps.push(now);
     
     // 濾除超過 1 秒前的時間戳記，只保留最近 1 秒內的
     messageTimestamps = messageTimestamps.filter(t => now - t <= 1000);
@@ -828,6 +861,33 @@ socket.on('connect', () => {
 socket.on('disconnect', () => {
     loadingOverlay.classList.remove('hidden');
 });
+
+socket.on('poll update', (update) => {
+    if (!update) return;
+    updatePollUI(update.pollId, update.options);
+});
+
+function updatePollUI(pollId, options) {
+    const entry = pollElements.get(pollId);
+    if (!entry || !options) return;
+
+    options.forEach((option, index) => {
+        const button = entry.buttons[index];
+        if (!button) return;
+        const label = button.querySelector('.poll-option-count');
+        if (label) label.textContent = option.count;
+    });
+    highlightPollSelection(pollId);
+}
+
+function highlightPollSelection(pollId) {
+    const selected = pollVotes.get(pollId);
+    const entry = pollElements.get(pollId);
+    if (!entry) return;
+    entry.buttons.forEach((button, index) => {
+        button.classList.toggle('selected', index === selected);
+    });
+}
 
 if ('serviceWorker' in navigator) {
     let isReloading = false;
