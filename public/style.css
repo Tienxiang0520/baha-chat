@@ -825,6 +825,27 @@ body {
     transform: translateY(-1px);
 }
 
+.custom-block {
+    border-radius: 12px;
+    padding: 16px;
+    margin: 16px 0;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    background-color: #f8f9fa;
+    color: #1f1f1f;
+}
+.custom-block.info {
+    border-color: #0c77ff;
+    background-color: rgba(12, 119, 255, 0.1);
+}
+.custom-block.warning {
+    border-color: #ffb347;
+    background-color: rgba(255, 179, 71, 0.15);
+}
+.custom-block.tip {
+    border-color: #28a745;
+    background-color: rgba(40, 167, 69, 0.12);
+}
+
 .sponsor-paypal-link {
     display: block;
     margin-top: 10px;

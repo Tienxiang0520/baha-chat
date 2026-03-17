@@ -303,6 +303,50 @@ const markdownParser = window.markdownit?.({
     typographer: true
 });
 
+if (markdownParser) {
+    markdownParser
+        .use(window.markdownitAnchor || (() => {}), {
+            permalink: true,
+            permalinkBefore: true,
+            permalinkSymbol: '¶',
+            level: [1, 2, 3]
+        })
+        .use(window.markdownitEmoji || (() => {}))
+        .use(window.markdownitAbbr || (() => {}))
+        .use(window.markdownitFootnote || (() => {}))
+        .use(window.markdownitTaskLists || (() => {}), { label: true })
+        .use(window.markdownitMark || (() => {}))
+        .use(window.markdownitIns || (() => {}))
+        .use(window.markdownitSub || (() => {}))
+        .use(window.markdownitSup || (() => {}))
+        .use(window.markdownitMultimdTable || (() => {}), {
+            enableMultilineRows: true,
+            enableRowspan: true,
+            enableColspan: true,
+            enableLinebreaks: true,
+            enableHtmlCaption: true
+        })
+        .use(window.markdownitVideo || (() => {}), {
+            youtube: { width: 560, height: 315 },
+            vimeo: { width: 560, height: 315 },
+            vine: { width: 560, height: 315 }
+        })
+        .use(window.markdownitHighlightjs || (() => {}), { auto: true, code: true });
+
+    if (window.markdownitContainer) {
+        ['info', 'warning', 'tip'].forEach(type => {
+            markdownParser.use(window.markdownitContainer, type, {
+                render(tokens, idx) {
+                    if (tokens[idx].nesting === 1) {
+                        return `<div class="custom-block ${type}">`;
+                    }
+                    return '</div>';
+                }
+            });
+        });
+    }
+}
+
 function parseMarkdown(text) {
     if (!markdownParser || typeof DOMPurify === 'undefined') {
         return escapeHTML(text);

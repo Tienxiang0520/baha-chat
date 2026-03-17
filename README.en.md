@@ -47,6 +47,11 @@ Baha is a real-time anonymous text chat platform built with Node.js and Socket.i
 
 Note that the client renders Markdown via `markdown-it` and sanitizes the resulting HTML with `DOMPurify`, so you can use heading, code, spoiler, and other Discord-style formatting safely right in the chat input.
 
+The Markdown stack now layers on three plugin families:
+1. **Interaction helpers** – `markdown-it-anchor` adds permalink anchors for H1~H3, `markdown-it-abbr` surfaces tooltip definitions for jargon, and `markdown-it-container` powers `::: warning ... :::`-style callouts.
+2. **Media & layout** – `markdown-it-video` auto-embeds YouTube/Vimeo/Vine, `markdown-it-sub`/`markdown-it-sup` support subscripts/superscripts, and `markdown-it-multimd-table` unlocks rowspan/colspan-powered tables.
+3. **Developer polish** – `markdown-it-highlightjs` paired with highlight.js gives beautiful syntax coloring for shared code blocks.
+
 | Effect | Syntax | Example |
 | :--- | :--- | :--- |
 | Heading 1 | `# text` | `# Main Heading` |
