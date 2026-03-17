@@ -58,6 +58,8 @@ const replyPreview = document.getElementById('reply-preview');
 const replyPreviewUser = document.getElementById('reply-preview-user');
 const replyPreviewText = document.getElementById('reply-preview-text');
 const cancelReplyBtn = document.getElementById('cancel-reply-btn');
+const swUpdateBanner = document.getElementById('sw-update-banner');
+const swUpdateButton = document.getElementById('sw-update-btn');
 
 const form = document.getElementById('form');
 const input = document.getElementById('input');
@@ -782,3 +784,43 @@ socket.on('connect', () => {
 socket.on('disconnect', () => {
     loadingOverlay.classList.remove('hidden');
 });
+
+if ('serviceWorker' in navigator) {
+    let isReloading = false;
+
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (isReloading) return;
+        isReloading = true;
+        window.location.reload();
+    });
+
+    const showUpdateBanner = (registration) => {
+        if (!swUpdateBanner || !registration?.waiting) return;
+        swUpdateBanner.classList.remove('hidden');
+        if (swUpdateButton) {
+            swUpdateButton.onclick = () => {
+                registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+            };
+        }
+    };
+
+    window.addEventListener('load', async () => {
+        try {
+            const registration = await navigator.serviceWorker.register('/sw.js');
+            if (registration.waiting) {
+                showUpdateBanner(registration);
+            }
+            registration.addEventListener('updatefound', () => {
+                const newWorker = registration.installing;
+                if (!newWorker) return;
+                newWorker.addEventListener('statechange', () => {
+                    if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                        showUpdateBanner(registration);
+                    }
+                });
+            });
+        } catch (error) {
+            console.log('ServiceWorker 註冊失敗: ', error);
+        }
+    });
+}

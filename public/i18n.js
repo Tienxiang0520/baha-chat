@@ -80,7 +80,9 @@ const translations = {
         sponsor_thanks: '每一份支持都會讓 Baha 更穩定，感謝你的陪伴 💕',
         sponsor_copied: '已複製贊助信箱',
         sponsor_paypal_action: '透過 PayPal 贊助',
-        sponsor_paypal_hint: '愛心贊助 NT$30 元'
+        sponsor_paypal_hint: '愛心贊助 NT$30 元',
+        sw_update_message: '已偵測到新版本，是否重新整理？',
+        sw_update_button: '立即更新'
     },
     'zh-CN': {
         connecting: '连接中...',
@@ -162,7 +164,9 @@ const translations = {
         sponsor_thanks: '每一份支持都会让 Baha 更稳定，感谢与你并肩前行 💕',
         sponsor_copied: '已复制赞助邮箱',
         sponsor_paypal_action: '通过 PayPal 赞助',
-        sponsor_paypal_hint: '爱心赞助 NT$30 元'
+        sponsor_paypal_hint: '爱心赞助 NT$30 元',
+        sw_update_message: '检测到新版本，是否重新加载？',
+        sw_update_button: '立即更新'
     },
     'en': {
         connecting: 'Connecting...',
@@ -244,7 +248,9 @@ const translations = {
         sponsor_thanks: 'Every contribution keeps Baha stable—thank you for being here 💕',
         sponsor_copied: 'Sponsor email copied',
         sponsor_paypal_action: 'Donate via PayPal',
-        sponsor_paypal_hint: 'Heart support NT$30'
+        sponsor_paypal_hint: 'Heart support NT$30',
+        sw_update_message: 'A new version was detected. Reload now?',
+        sw_update_button: 'Reload'
     },
     'ja': {
         connecting: '接続中...',
@@ -326,7 +332,9 @@ const translations = {
         sponsor_thanks: '皆様の支援が安定運用につながります。ありがとうございます 💕',
         sponsor_copied: 'メールアドレスをコピーしました',
         sponsor_paypal_action: 'PayPal で支援する',
-        sponsor_paypal_hint: 'ハート支援 NT$30'
+        sponsor_paypal_hint: 'ハート支援 NT$30',
+        sw_update_message: '新しいバージョンがあります。リロードしますか？',
+        sw_update_button: 'リロード'
     },
     'ko': {
         connecting: '연결 중...',
@@ -408,7 +416,9 @@ const translations = {
         sponsor_thanks: '여러분의 후원이 Baha를 안정적으로 유지합니다. 감사합니다 💕',
         sponsor_copied: '이메일 주소가 복사되었습니다',
         sponsor_paypal_action: 'PayPal 로 후원하기',
-        sponsor_paypal_hint: '하트 후원 NT$30'
+        sponsor_paypal_hint: '하트 후원 NT$30',
+        sw_update_message: '새 버전이 감지되었습니다. 지금 새로고침하시겠어요?',
+        sw_update_button: '새로고침'
     },
     'vi': {
         connecting: 'Đang kết nối...',
@@ -490,6 +500,8 @@ const translations = {
         sponsor_thanks: 'Mỗi đóng góp giúp Baha hoạt động ổn định. Cảm ơn bạn 💕',
         sponsor_copied: 'Đã sao chép email hỗ trợ',
         sponsor_paypal_action: 'Ủng hộ qua PayPal',
-        sponsor_paypal_hint: 'Ủng hộ trái tim NT$30'
+        sponsor_paypal_hint: 'Ủng hộ trái tim NT$30',
+        sw_update_message: 'Đã phát hiện phiên bản mới. Tải lại ngay?',
+        sw_update_button: 'Tải lại'
     }
 };

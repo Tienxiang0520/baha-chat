@@ -13,10 +13,15 @@ const urlsToCache = [
 
 // 安裝 Service Worker 並快取必要檔案
 self.addEventListener('install', event => {
-    self.skipWaiting(); // 強制立刻啟用新的 Service Worker
     event.waitUntil(
         caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache))
     );
+});
+
+self.addEventListener('message', event => {
+    if (event.data && event.data.type === 'SKIP_WAITING') {
+        self.skipWaiting();
+    }
 });
 
 // 啟用新的 Service Worker 並刪除舊版本的快取

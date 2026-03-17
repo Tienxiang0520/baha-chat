@@ -176,6 +176,11 @@
         <div class="menu-item" id="menu-copy" data-i18n="menu_copy">📋 複製文字</div>
     </div>
 
+    <div id="sw-update-banner" class="sw-update-banner hidden">
+        <span data-i18n="sw_update_message">已偵測到新版本，是否重新整理？</span>
+        <button id="sw-update-btn" data-i18n="sw_update_button">立即更新</button>
+    </div>
+
     <!-- 引入 Socket.io 客戶端套件 -->
     <script src="/socket.io/socket.io.js"></script>
     <script src="i18n.js"></script>
@@ -183,15 +188,5 @@
     <script src="https://cdn.jsdelivr.net/npm/dompurify@2.4.0/dist/purify.min.js"></script>
     <script src="script.js"></script>
     
-    <!-- 註冊 Service Worker -->
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js')
-                    .then(registration => console.log('ServiceWorker 註冊成功'))
-                    .catch(err => console.log('ServiceWorker 註冊失敗: ', err));
-            });
-        }
-    </script>
 </body>
 </html>

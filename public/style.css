@@ -793,6 +793,38 @@ body {
     line-height: 1.5;
 }
 
+.sw-update-banner {
+    position: fixed;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: rgba(0, 0, 0, 0.85);
+    color: #fff;
+    padding: 12px 20px;
+    border-radius: 25px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+    z-index: 100;
+    font-size: 0.95rem;
+}
+
+.sw-update-banner button {
+    border: none;
+    background-color: #ffb347;
+    color: #331c00;
+    padding: 6px 14px;
+    border-radius: 999px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: transform 0.2s;
+}
+
+.sw-update-banner button:hover {
+    transform: translateY(-1px);
+}
+
 .sponsor-paypal-link {
     display: block;
     margin-top: 10px;

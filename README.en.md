@@ -79,6 +79,10 @@ If you enjoy this anonymous room, you can keep it alive through:
 
 Every contribution helps keep the project stable—thanks for being here 💕
 
+## 🧠 PWA Cache Tips
+
+Because the app ships with a Service Worker, browsers can sometimes keep showing an older version. In addition to forcing a hard refresh, an update banner now appears when a new Service Worker finishes installing so you can reload once it’s ready instead of clearing browser caches manually.
+
 ## 🚀 Local Installation & Execution
 
 ```bash
