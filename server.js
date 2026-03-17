@@ -241,6 +241,13 @@ io.on('connection', async (socket) => {
         }
     });
 
+    socket.on('typing', (data) => {
+        const { room, typing } = data || {};
+        if (!room) return;
+        if (!socket.rooms.has(room)) return;
+        socket.to(room).emit('typing status', { userId: socket.userId, typing: !!typing });
+    });
+
     // 監聽投票事件
     socket.on('poll vote', (data) => {
         const { pollId, optionIndex } = data || {};

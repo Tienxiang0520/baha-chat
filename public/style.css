@@ -825,6 +825,13 @@ body {
     transform: translateY(-1px);
 }
 
+.typing-indicator {
+    padding: 6px 15px;
+    font-size: 0.85rem;
+    color: #555;
+    min-height: 24px;
+}
+
 .custom-block {
     border-radius: 12px;
     padding: 16px;

@@ -60,8 +60,14 @@ const replyPreviewText = document.getElementById('reply-preview-text');
 const cancelReplyBtn = document.getElementById('cancel-reply-btn');
 const swUpdateBanner = document.getElementById('sw-update-banner');
 const swUpdateButton = document.getElementById('sw-update-btn');
+const typingIndicator = document.getElementById('typing-indicator');
 const pollElements = new Map();
 const pollVotes = new Map();
+const TYPING_INACTIVITY_MS = 2500;
+let typingTimer = null;
+let isTyping = false;
+const typingUsers = new Map();
+const typingThrottles = new Map();
 
 const form = document.getElementById('form');
 const input = document.getElementById('input');
@@ -225,6 +231,49 @@ function stringToColor(str) {
     return `hsl(${hue}, 70%, 45%)`; // 飽和度 70%, 亮度 45% 確保字體在淺色背景上夠清晰
 }
 
+function updateTypingIndicator() {
+    if (!typingIndicator) return;
+    if (typingUsers.size === 0) {
+        typingIndicator.classList.add('hidden');
+        return;
+    }
+    const [firstUser] = typingUsers.keys();
+    typingIndicator.classList.remove('hidden');
+    const template = t.typing_indicator || '{id} is typing...';
+    typingIndicator.textContent = template.replace('{id}', `[${firstUser}]`);
+}
+
+function queueTypingTimeout(userId) {
+    const existing = typingThrottles.get(userId);
+    if (existing) {
+        clearTimeout(existing);
+    }
+
+    const handle = setTimeout(() => {
+        typingUsers.delete(userId);
+        typingThrottles.delete(userId);
+        updateTypingIndicator();
+    }, TYPING_INACTIVITY_MS);
+
+    typingThrottles.set(userId, handle);
+}
+
+function handleIncomingTyping(userId, typing) {
+    if (!userId || userId === localUserId) return;
+    if (typing) {
+        typingUsers.set(userId, true);
+        queueTypingTimeout(userId);
+    } else {
+        typingUsers.delete(userId);
+        const existing = typingThrottles.get(userId);
+        if (existing) {
+            clearTimeout(existing);
+            typingThrottles.delete(userId);
+        }
+    }
+    updateTypingIndicator();
+}
+
 /**
  * 增加系統提示訊息到畫面上
  */
@@ -382,6 +431,17 @@ function parseMarkdown(text) {
         console.error('Markdown render failed', error);
         return escapeHTML(text);
     }
+}
+
+function sendTypingStatus(flag) {
+    if (!currentRoom) return;
+    if (flag === isTyping) return;
+    isTyping = flag;
+    if (!flag && typingTimer) {
+        clearTimeout(typingTimer);
+        typingTimer = null;
+    }
+    socket.emit('typing', { room: currentRoom, typing: flag });
 }
 
 /**
@@ -641,6 +701,7 @@ backBtn.addEventListener('click', () => {
     messages.innerHTML = ''; // 清空聊天畫面以防下次進入時疊加
     replyingTo = null; // 重置回覆狀態
     replyPreview.classList.add('hidden');
+    sendTypingStatus(false);
 });
 
 /**
@@ -780,7 +841,10 @@ form.addEventListener('submit', function(e) {
     const text = input.value;
     const trimmedText = text.trim();
     
-    if (trimmedText.length === 0) return;
+    if (trimmedText.length === 0) {
+        sendTypingStatus(false);
+        return;
+    }
 
     // 檢查是否為 Markdown 切換指令
     if (trimmedText === '/md') {
@@ -788,6 +852,7 @@ form.addEventListener('submit', function(e) {
         addSystemMessage(isMarkdownEnabled ? t.system_md_on : t.system_md_off);
         input.value = ''; // 清空輸入框
         input.style.height = 'auto'; // 重置輸入框高度
+        sendTypingStatus(false);
         return; // 中斷執行，不把指令發送給伺服器
     }
 
@@ -798,6 +863,7 @@ form.addEventListener('submit', function(e) {
         input.style.height = 'auto'; // 送出後重置輸入框高度
         replyingTo = null; // 送出後清空回覆狀態
         replyPreview.classList.add('hidden');
+        sendTypingStatus(false);
     }
 });
 
@@ -805,6 +871,16 @@ form.addEventListener('submit', function(e) {
 input.addEventListener('input', function() {
     this.style.height = 'auto'; // 先重置高度以重新計算
     this.style.height = this.scrollHeight + 'px'; // 設定為實際內容高度
+    if (!currentRoom) return;
+    const trimmed = this.value.trim();
+    if (trimmed.length === 0) {
+        sendTypingStatus(false);
+        clearTimeout(typingTimer);
+        return;
+    }
+    sendTypingStatus(true);
+    clearTimeout(typingTimer);
+    typingTimer = setTimeout(() => sendTypingStatus(false), TYPING_INACTIVITY_MS);
 });
 
 // 讓使用者在聊天輸入框按 Enter 也能發送訊息
@@ -815,6 +891,8 @@ input.addEventListener('keydown', function(e) {
         form.querySelector('button[type="submit"]').click(); // 觸發發送按鈕的點擊事件
     }
 });
+
+input.addEventListener('blur', () => sendTypingStatus(false));
 
 // 監聽來自伺服器的歷史訊息事件 (剛加入房間時觸發)
 socket.on('chat history', function(history) {
