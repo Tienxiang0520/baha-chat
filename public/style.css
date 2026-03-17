@@ -337,6 +337,14 @@ body {
     border-radius: 20px;
     cursor: pointer;
     font-size: 16px;
+    transition: background-color 0.2s, transform 0.2s, box-shadow 0.2s;
+}
+
+#create-room-btn:hover,
+#create-room-btn:focus-visible {
+    background-color: #218838;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 12px rgba(33, 136, 56, 0.3);
 }
 
 #form {
