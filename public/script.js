@@ -68,6 +68,7 @@ let typingTimer = null;
 let isTyping = false;
 const typingUsers = new Map();
 const typingThrottles = new Map();
+const pendingAdminTokens = new Map();
 
 const form = document.getElementById('form');
 const input = document.getElementById('input');
@@ -272,6 +273,12 @@ function handleIncomingTyping(userId, typing) {
         }
     }
     updateTypingIndicator();
+}
+
+function displayAdminToken(room, token) {
+    const template = t.room_admin_token_message || '建房者代碼：{token}，請妥善保存。';
+    const message = template.replace('{token}', token);
+    addSystemMessage(message);
 }
 
 function clearTypingState() {
@@ -827,6 +834,9 @@ socket.on('join success', (roomName) => {
     // 切換視圖到聊天室
     lobbyView.classList.add('hidden');
     chatView.classList.remove('hidden');
+    if (pendingAdminTokens.has(roomName)) {
+        displayAdminToken(roomName, pendingAdminTokens.get(roomName));
+    }
 });
 
 // 監聽加入房間失敗 (密碼錯誤)
@@ -844,9 +854,11 @@ socket.on('room list', (rooms) => {
 });
 
 socket.on('room admin token', (payload) => {
-    if (!payload || !payload.token) return;
-    const tokenMessage = t.room_admin_token_message?.replace('{token}', payload.token) || `建房者代碼：${payload.token}`;
-    addSystemMessage(tokenMessage);
+    if (!payload || !payload.token || !payload.room) return;
+    pendingAdminTokens.set(payload.room, payload.token);
+    if (payload.room === currentRoom) {
+        displayAdminToken(payload.room, payload.token);
+    }
 });
 
 // 處理表單提交
