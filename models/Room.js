@@ -8,7 +8,11 @@ const roomSchema = new mongoose.Schema({
     password: { type: String, default: null },
     creatorId: { type: String, default: null },
     adminTokenHash: { type: String, default: null },
-    bannedIds: { type: [String], default: [] }
+    bannedIds: { type: [String], default: [] },
+    isThread: { type: Boolean, default: false },
+    threadParentRoom: { type: String, default: null },
+    threadParentMessageId: { type: String, default: null },
+    threadTitle: { type: String, default: null }
 });
 
 module.exports = mongoose.model('Room', roomSchema);

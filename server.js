@@ -144,10 +144,14 @@ io.on('connection', async (socket) => {
         const password = typeof data === 'object' ? data.password : null;
 
         const existingRoom = await Room.findOne({ name: roomName });
-        if (!existingRoom) {
+        if (existingRoom) {
+            socket.emit('room create error', 'room_name_taken');
+            return;
+        }
+
+        try {
             let hashedPassword = null;
             if (password) {
-                // 使用 bcrypt 加密密碼，10 是 saltRounds (加鹽與計算複雜度)
                 hashedPassword = await bcrypt.hash(password, 10);
             }
             const adminToken = `Baha-Admin-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
@@ -163,9 +167,69 @@ io.on('connection', async (socket) => {
             });
             socket.adminRooms.add(roomName);
             socket.emit('room admin token', { room: roomName, token: adminToken });
-            // 廣播給所有人更新房間列表
             io.emit('room list', await getSortedRoomList(io));
+        } catch (createError) {
+            console.error('建立房間失敗：', createError);
+            socket.emit('room create error', 'room_create_failed');
         }
+    });
+
+    socket.on('create thread', async (data) => {
+        const roomName = data?.room;
+        const messageId = data?.messageId;
+        const title = (typeof data?.title === 'string' ? data.title.trim() : '').substring(0, 60);
+        if (!roomName || !messageId) return;
+        if (!socket.rooms.has(roomName)) return;
+        const parentMessage = await Message.findById(messageId);
+        if (!parentMessage) {
+            socket.emit('chat message', { id: 'System', text: '❌ 找不到該訊息，無法建立討論串。', timestamp: Date.now() });
+            return;
+        }
+
+        let threadRoom = await Room.findOne({ threadParentRoom: roomName, threadParentMessageId: messageId });
+        if (!threadRoom) {
+            const snippet = (parentMessage.text || '').replace(/\s+/g, ' ').trim().slice(0, 40) || 'Thread';
+            const displayName = title || `Thread：${snippet}`;
+            const threadName = `thread-${roomName}-${messageId}`;
+            try {
+                threadRoom = await Room.create({
+                    name: threadName,
+                    displayName,
+                    createdAt: Date.now(),
+                    isThread: true,
+                    threadParentRoom: roomName,
+                    threadParentMessageId: messageId,
+                    threadTitle: displayName
+                });
+            } catch (error) {
+                console.error('建立討論串失敗：', error);
+                threadRoom = await Room.findOne({ threadParentRoom: roomName, threadParentMessageId: messageId });
+                if (!threadRoom) {
+                    const fallback = await Room.findOne({ name: threadName });
+                    if (fallback && fallback.isThread) {
+                        threadRoom = fallback;
+                    }
+                }
+            }
+        }
+
+        if (!threadRoom) {
+            socket.emit('chat message', { id: 'System', text: '❌ 無法建立討論串，請稍後再試。', timestamp: Date.now() });
+            return;
+        }
+
+        io.to(roomName).emit('chat message', {
+            id: 'System',
+            text: `🧵 討論串已建立：${threadRoom.displayName}`,
+            timestamp: Date.now(),
+            threadLink: { room: threadRoom.name, displayName: threadRoom.displayName }
+        });
+
+        socket.emit('thread ready', {
+            room: threadRoom.name,
+            displayName: threadRoom.displayName,
+            parentRoom: roomName
+        });
     });
 
     // 監聽加入房間
@@ -174,7 +238,11 @@ io.on('connection', async (socket) => {
         const password = typeof data === 'object' ? data.password : null;
 
         const targetRoom = await Room.findOne({ name: roomName });
-        if (targetRoom && targetRoom.isLocked) {
+        if (!targetRoom) {
+            socket.emit('join error', 'room_not_found');
+            return;
+        }
+        if (targetRoom.isLocked) {
             // 使用 bcrypt 比對使用者輸入的密碼與資料庫中的加密密碼是否相符
             const isMatch = await bcrypt.compare(password || '', targetRoom.password);
             if (!isMatch) {
@@ -195,7 +263,10 @@ io.on('connection', async (socket) => {
         socket.join(roomName);
         // 從資料庫撈取最新的歷史訊息，並反轉順序讓畫面由舊到新正常顯示
         let messages = await Message.find({ roomName }).sort({ timestamp: -1 }).limit(LOAD_HISTORY_LIMIT);
-        messages = messages.reverse();
+        messages = messages.reverse().map(msg => {
+            const converted = msg.toObject ? msg.toObject() : msg;
+            return { ...converted, mid: converted._id?.toString() };
+        });
         socket.emit('chat history', messages);
         // 廣播給所有人更新房間列表 (因為人數變動)
         io.emit('room list', await getSortedRoomList(io));
@@ -203,7 +274,11 @@ io.on('connection', async (socket) => {
         // 通知前端加入成功，可以切換畫面了
         socket.emit('join success', {
             name: roomName,
-            displayName: targetRoom?.displayName || roomName
+            displayName: targetRoom?.displayName || roomName,
+            isThread: !!targetRoom?.isThread,
+            parentRoom: targetRoom?.threadParentRoom || null,
+            parentMessageId: targetRoom?.threadParentMessageId || null,
+            threadTitle: targetRoom?.threadTitle || null
         });
     });
 
@@ -247,11 +322,9 @@ io.on('connection', async (socket) => {
         const existingRoom = await Room.findOne({ name: room });
         if (existingRoom) {
             try {
-                // 將新訊息存入資料庫，永久保存
-                await Message.create({ roomName: room, ...messageData });
-                
-                // 只將訊息廣播給在同一個房間的使用者
-                io.to(room).emit('chat message', messageData);
+                const messageRecord = await Message.create({ roomName: room, ...messageData });
+                const outgoing = { ...messageData, mid: messageRecord._id.toString() };
+                io.to(room).emit('chat message', outgoing);
             } catch (err) {
                 console.error('儲存訊息發生錯誤:', err);
                 socket.emit('chat message', { id: 'System', text: '❌ 系統錯誤，訊息傳送失敗。', timestamp: Date.now() });

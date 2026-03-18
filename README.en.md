@@ -81,6 +81,14 @@ The Markdown stack now layers on three plugin families:
 - `/mute <ID>`: Admins can silence an ID so they cannot send messages while still seeing the chat.
 - `typing indicator`: The chat footer shows who is typing (by their anonymous ID) so everyone knows when someone is composing a message.
 
+## 🧵 Threads
+
+If a message spawns a whirlwind of replies, right-click it (or long-press on mobile) and choose “🧵 Start thread.” Pick a title, and the server will post a system message in the main room with a “Open thread” button; clicking it takes everyone into a dedicated sub-room that always knows which parent room it came from and lets you return with a single tap. Threads keep the main conversation tidy without silencing popular topics.
+
+## ⚠️ Duplicate room names
+
+When you create a new room, the client now immediately warns you if the name is already taken so you can pick a unique identifier instead of silently failing.
+
 ## 🛡️ Room Host & Admin Commands
 
 When you create a room you get a one-time `Baha-Admin-XXXX-XXXX` key that is stored in the chat view and can be used later via `/auth <key>` as long as your anonymous ID is preserved in `localStorage`. This lets you reclaim admin privileges without logging in.

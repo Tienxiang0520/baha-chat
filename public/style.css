@@ -112,6 +112,54 @@ body {
     position: relative; /* 讓彈幕可以絕對定位在聊天室內 */
 }
 
+#thread-banner {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 16px;
+    background-color: #f8f9fb;
+    border-bottom: 1px solid #dfe2e8;
+    font-size: 0.9rem;
+}
+
+.thread-banner.hidden {
+    display: none;
+}
+
+.thread-banner button {
+    margin-left: auto;
+    background-color: #0084ff;
+    color: #fff;
+    border-radius: 999px;
+    padding: 6px 14px;
+    border: none;
+    cursor: pointer;
+    font-weight: bold;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.thread-banner button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(0, 132, 255, 0.3);
+}
+
+.thread-link-btn {
+    margin-top: 6px;
+    background: none;
+    border: 1px solid #0084ff;
+    color: #0084ff;
+    border-radius: 999px;
+    padding: 2px 10px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.thread-link-btn:hover {
+    background-color: #0084ff;
+    color: #fff;
+}
+
 #danmaku-container {
     position: absolute;
     top: 60px; /* 避開頂部標題 */

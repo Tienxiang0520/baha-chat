@@ -12,7 +12,10 @@ async function getSortedRoomList(io) {
             userCount,
             isLocked: !!room.isLocked,
             creatorId: room.creatorId,
-            hasPassword: !!room.password
+            hasPassword: !!room.password,
+            isThread: !!room.isThread,
+            threadParentRoom: room.threadParentRoom,
+            threadTitle: room.threadTitle
         };
     });
 }

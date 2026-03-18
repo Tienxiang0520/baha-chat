@@ -158,14 +158,19 @@
     </div>
 
     <!-- 聊天室畫面：進入特定話題後顯示，預設隱藏 -->
-    <div id="chat-view" class="chat-container hidden">
-        <header class="chat-header">
-            <button id="back-btn" class="header-btn" data-i18n="back_to_lobby">⬅ 返回大廳</button>
-            <h1 id="room-title" data-i18n="room_title_default">話題標題</h1>
-        </header>
-        
-        <div id="danmaku-container"></div>
-        <ul id="messages"></ul>
+        <div id="chat-view" class="chat-container hidden">
+            <header class="chat-header">
+                <button id="back-btn" class="header-btn" data-i18n="back_to_lobby">⬅ 返回大廳</button>
+                <h1 id="room-title" data-i18n="room_title_default">話題標題</h1>
+            </header>
+            <div id="thread-banner" class="thread-banner hidden">
+                <span data-i18n="thread_parent_label">此為子討論串，原房：</span>
+                <span id="thread-parent-name"></span>
+                <button id="thread-back-btn" type="button" data-i18n="thread_back">返回主頻道</button>
+            </div>
+            
+            <div id="danmaku-container"></div>
+            <ul id="messages"></ul>
         
         <!-- 準備回覆的預覽區塊 (預設隱藏) -->
         <div id="reply-preview" class="hidden">
@@ -186,6 +191,7 @@
     <div id="message-context-menu" class="hidden">
         <div class="menu-item" id="menu-reply" data-i18n="menu_reply">↩️ 回覆訊息</div>
         <div class="menu-item" id="menu-copy" data-i18n="menu_copy">📋 複製文字</div>
+        <div class="menu-item" id="menu-thread" data-i18n="menu_thread">🧵 開啟討論串</div>
     </div>
 
     <div id="sw-update-banner" class="sw-update-banner hidden">
