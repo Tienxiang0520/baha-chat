@@ -47,7 +47,9 @@ async function handleCommand(socket, data) {
 
     if (!command) return false;
 
-    if (command.adminOnly && !socket.isAdmin) {
+    const roomName = data?.room;
+    const hasRoomAdmin = roomName && socket.adminRooms?.has(roomName);
+    if (command.adminOnly && !socket.isAdmin && !hasRoomAdmin) {
         socket.emit('chat message', { id: 'System', text: '❌ 您沒有管理員權限！請先登入。', timestamp: Date.now() });
         return true;
     }

@@ -32,7 +32,6 @@ module.exports = {
 
         socket.adminRooms = socket.adminRooms || new Set();
         socket.adminRooms.add(roomName);
-        socket.isAdmin = true;
         socket.emit('chat message', { id: 'System', text: '👑 您已取得該房間的管理權限，請合理使用。', timestamp: Date.now() });
     }
 };

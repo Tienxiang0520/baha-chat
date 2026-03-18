@@ -10,6 +10,7 @@ const { MongoMemoryServer } = require('mongodb-memory-server');
 const { handleCommand } = require('./command-handler');
 const { LOAD_HISTORY_LIMIT } = require('./config');
 const { getPoll, votePoll } = require('./polls');
+const { getSortedRoomList } = require('./utils/room-list');
 
 const app = express();
 const server = http.createServer(app);
@@ -60,23 +61,6 @@ Room.findOne({ name: '綜合閒聊' }).then(room => {
 // 設定靜態檔案資料夾，讓 Express 可以提供 HTML, CSS, JS 檔案
 app.use(express.static('public'));
 
-// 取得並排序房間列表的輔助函式
-const getSortedRoomList = async () => {
-    // 從資料庫撈取所有房間，並依建立時間反向排序
-    const dbRooms = await Room.find().sort({ createdAt: -1 }).limit(100); // 加上 limit 避免未來資料量過大導致效能崩潰
-    const roomList = dbRooms.map(room => {
-        const roomData = io.sockets.adapter.rooms.get(room.name);
-        const userCount = roomData ? roomData.size : 0;
-        return {
-            name: room.name,
-            createdAt: room.createdAt,
-            userCount,
-            isLocked: room.isLocked
-        };
-    });
-    return roomList;
-};
-
 // 輕量級網頁摘要抓取函式 (抓取 Open Graph 標籤)
 async function fetchLinkPreview(text) {
     const urlMatch = text.match(/(https?:\/\/[^\s]+)/);
@@ -125,6 +109,7 @@ io.on('connection', async (socket) => {
     socket.userId = userId;
     socket.isAdmin = false; // 預設為一般使用者
     socket.adminRooms = new Set();
+    socket.mutedRooms = new Map();
     socket.loginAttempts = 0; // 初始化登入嘗試次數
     socket.lockoutUntil = null; // 初始化鎖定時間
     console.log(`匿名使用者 ${userId} 已連線`);
@@ -147,7 +132,7 @@ io.on('connection', async (socket) => {
     }
 
     // 當新使用者連線時，傳送目前所有可用房間列表
-    socket.emit('room list', await getSortedRoomList());
+    socket.emit('room list', await getSortedRoomList(io));
     
     // 傳送歷史公告列表 (最多拿最新 20 筆)
     const announcements = await Announcement.find().sort({ createdAt: -1 }).limit(20);
@@ -169,15 +154,17 @@ io.on('connection', async (socket) => {
             const adminTokenHash = await bcrypt.hash(adminToken, 10);
             await Room.create({
                 name: roomName,
+                displayName: roomName,
                 createdAt: Date.now(),
                 isLocked: !!password,
                 password: hashedPassword,
                 creatorId: socket.userId,
                 adminTokenHash
             });
+            socket.adminRooms.add(roomName);
             socket.emit('room admin token', { room: roomName, token: adminToken });
             // 廣播給所有人更新房間列表
-            io.emit('room list', await getSortedRoomList());
+            io.emit('room list', await getSortedRoomList(io));
         }
     });
 
@@ -196,6 +183,11 @@ io.on('connection', async (socket) => {
             }
         }
 
+        if (targetRoom && targetRoom.bannedIds.includes(userId)) {
+            socket.emit('join error', 'room_banned');
+            return;
+        }
+
         // 離開其他的話題房間 (避免收到其他房間的訊息)
         socket.rooms.forEach(room => {
             if (room !== socket.id) socket.leave(room);
@@ -206,17 +198,20 @@ io.on('connection', async (socket) => {
         messages = messages.reverse();
         socket.emit('chat history', messages);
         // 廣播給所有人更新房間列表 (因為人數變動)
-        io.emit('room list', await getSortedRoomList());
+        io.emit('room list', await getSortedRoomList(io));
         
         // 通知前端加入成功，可以切換畫面了
-        socket.emit('join success', roomName);
+        socket.emit('join success', {
+            name: roomName,
+            displayName: targetRoom?.displayName || roomName
+        });
     });
 
     // 監聽離開房間 (返回大廳時觸發)
     socket.on('leave room', async (roomName) => {
         socket.leave(roomName);
         // 廣播給所有人更新房間列表
-        io.emit('room list', await getSortedRoomList());
+        io.emit('room list', await getSortedRoomList(io));
     });
 
     // 監聽來自前端的 'chat message' 事件
@@ -226,6 +221,17 @@ io.on('connection', async (socket) => {
         // 【安全防護】檢查該使用者是否真的有成功加入這個房間（防止未輸入密碼者透過程式碼強行發送）
         if (room && !socket.rooms.has(room)) {
             return; 
+        }
+
+        if (room) {
+            const muteUntil = socket.mutedRooms.get(room);
+            if (muteUntil && muteUntil > Date.now()) {
+                socket.emit('chat message', { id: 'System', text: '❌ 你已被該房間管理員禁言，無法發送訊息。', timestamp: Date.now() });
+                return;
+            }
+            if (muteUntil) {
+                socket.mutedRooms.delete(room);
+            }
         }
 
         // 【指令處理】檢查訊息是否為指令，並將完整 data 傳入以取得 room 等資訊
@@ -281,7 +287,7 @@ io.on('connection', async (socket) => {
         console.log(`匿名使用者 ${userId} 已離線`);
         // 使用者斷線後，房間人數會自動更新，我們需要廣播最新的列表
         // 使用 setTimeout 確保 adapter 的房間資訊已更新
-        setTimeout(async () => io.emit('room list', await getSortedRoomList()), 100);
+        setTimeout(async () => io.emit('room list', await getSortedRoomList(io)), 100);
 
         // 當人數降回 150 人以下時，重置 Email 發送狀態，以便下次再度達標時能重新提醒
         const currentTotalUsers = io.engine.clientsCount;

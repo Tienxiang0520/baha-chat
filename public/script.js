@@ -279,6 +279,7 @@ function displayAdminToken(room, token) {
     const template = t.room_admin_token_message || '建房者代碼：{token}，請妥善保存。';
     const message = template.replace('{token}', token);
     addSystemMessage(message);
+    pendingAdminTokens.delete(room);
 }
 
 function clearTypingState() {
@@ -743,7 +744,11 @@ function renderRoomList() {
     }
 
     // 2. 文字過濾
-    let filteredRooms = allRooms.filter(room => room.name.toLowerCase().includes(searchTerm));
+    let filteredRooms = allRooms.filter(room => {
+        const displayName = (room.displayName || room.name).toLowerCase();
+        const rawName = room.name.toLowerCase();
+        return displayName.includes(searchTerm) || rawName.includes(searchTerm);
+    });
 
     // 3. 狀態過濾 (上鎖/公開)
     if (filterLocked !== null) {
@@ -766,9 +771,10 @@ function renderRoomList() {
     filteredRooms.forEach(room => {
         const li = document.createElement('li');
 
+        const displayName = room.displayName || room.name;
         const nameSpan = document.createElement('span');
         nameSpan.className = 'room-name-text';
-        nameSpan.textContent = `${room.isLocked ? '🔒' : '💬'} ${room.name}`;
+        nameSpan.textContent = `${room.isLocked ? '🔒' : '💬'} ${displayName}`;
 
         const infoSpan = document.createElement('span');
         infoSpan.className = 'room-info';
@@ -827,14 +833,16 @@ socket.on('new announcement', (data) => {
 });
 
 // 監聽加入房間成功
-socket.on('join success', (roomName) => {
-    currentRoom = roomName;
-    roomTitle.textContent = roomName;
+socket.on('join success', (roomInfo) => {
+    const roomName = roomInfo?.name;
+    const displayName = roomInfo?.displayName || roomName || '';
+    currentRoom = roomName || '';
+    roomTitle.textContent = displayName;
     
     // 切換視圖到聊天室
     lobbyView.classList.add('hidden');
     chatView.classList.remove('hidden');
-    if (pendingAdminTokens.has(roomName)) {
+    if (roomName && pendingAdminTokens.has(roomName)) {
         displayAdminToken(roomName, pendingAdminTokens.get(roomName));
     }
 });
@@ -861,16 +869,36 @@ socket.on('room admin token', (payload) => {
     }
 });
 
+socket.on('room cleared', (payload) => {
+    if (!payload || payload.room !== currentRoom) return;
+    messages.innerHTML = '';
+    replyingTo = null;
+    replyPreview.classList.add('hidden');
+    addSystemMessage(t.room_cleared || '🧹 房間已被清空。');
+});
+
+socket.on('room deleted', (payload) => {
+    if (!payload || payload.room !== currentRoom) return;
+    addSystemMessage(t.room_deleted || '⚠️ 房間已被刪除，返回大廳。');
+    backBtn.click();
+});
+
+socket.on('room renamed', (payload) => {
+    if (!payload || payload.room !== currentRoom) return;
+    const newName = payload.displayName || payload.room;
+    roomTitle.textContent = newName;
+    addSystemMessage((t.room_renamed || '✏️ 房間已重新命名。').replace('{name}', newName));
+});
+
 // 處理表單提交
 form.addEventListener('submit', function(e) {
     e.preventDefault(); // 防止頁面重新整理
     const text = input.value;
-    const trimmedText = text.trim();
-    
-    if (trimmedText.length === 0) {
+    if (text.trim().length === 0) {
         sendTypingStatus(false);
         return;
     }
+    const trimmedText = text.trim();
 
     // 檢查是否為 Markdown 切換指令
     if (trimmedText === '/md') {
@@ -969,6 +997,13 @@ socket.on('disconnect', () => {
 socket.on('poll update', (update) => {
     if (!update) return;
     updatePollUI(update.pollId, update.options);
+});
+
+socket.on('kicked', ({room}) => {
+    if (room && currentRoom === room) {
+        addSystemMessage(`⚠️ 你已被踢出 ${room}`); // option use translations?
+        backBtn.click();
+    }
 });
 
 socket.on('typing status', (data) => {
