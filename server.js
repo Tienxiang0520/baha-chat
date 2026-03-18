@@ -218,6 +218,22 @@ io.on('connection', async (socket) => {
             return;
         }
 
+        if (parentMessage) {
+            parentMessage.threadOpened = true;
+            parentMessage.threadRoom = threadRoom.name;
+            try {
+                await parentMessage.save();
+            } catch (error) {
+                console.error('更新訊息討論串資料失敗：', error);
+            }
+        }
+
+        io.to(roomName).emit('thread status', {
+            parentMessageId: messageId,
+            threadRoom: threadRoom.name,
+            threadTitle: threadRoom.displayName
+        });
+
         io.to(roomName).emit('chat message', {
             id: 'System',
             text: `🧵 討論串已建立：${threadRoom.displayName}`,
@@ -256,9 +272,12 @@ io.on('connection', async (socket) => {
             return;
         }
 
-        // 離開其他的話題房間 (避免收到其他房間的訊息)
+        const roomsToKeep = new Set([socket.id, roomName]);
+        if (targetRoom?.isThread && targetRoom.threadParentRoom) {
+            roomsToKeep.add(targetRoom.threadParentRoom);
+        }
         socket.rooms.forEach(room => {
-            if (room !== socket.id) socket.leave(room);
+            if (!roomsToKeep.has(room)) socket.leave(room);
         });
         socket.join(roomName);
         // 從資料庫撈取最新的歷史訊息，並反轉順序讓畫面由舊到新正常顯示

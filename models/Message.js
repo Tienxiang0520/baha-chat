@@ -10,6 +10,8 @@ const messageSchema = new mongoose.Schema({
         id: String,
         text: String
     },
+    threadOpened: { type: Boolean, default: false },
+    threadRoom: String,
     effect: String,
     linkPreview: {
         url: String,

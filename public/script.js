@@ -73,6 +73,10 @@ const pendingAdminTokens = new Map();
 const threadBanner = document.getElementById('thread-banner');
 const threadParentName = document.getElementById('thread-parent-name');
 const threadBackBtn = document.getElementById('thread-back-btn');
+const adminKeyBanner = document.getElementById('admin-key-banner');
+const adminKeyText = document.getElementById('admin-key-text');
+const adminKeyCopyBtn = document.getElementById('admin-key-copy');
+const adminKeyCloseBtn = document.getElementById('admin-key-close');
 
 const form = document.getElementById('form');
 const input = document.getElementById('input');
@@ -86,6 +90,7 @@ let isMarkdownEnabled = true; // 紀錄是否啟用 Markdown
 let replyingTo = null; // 紀錄目前正在回覆的訊息資料
 let selectedMessageMid = null;
 let activeThreadParent = null;
+let activeThreadTitle = '';
 
 // ===== 畫面切換邏輯 =====
 featuresBtn.addEventListener('click', () => {
@@ -179,9 +184,8 @@ menuReply.addEventListener('click', () => {
 if (menuThread) {
     menuThread.addEventListener('click', () => {
         if (!currentRoom || !selectedMessageMid) return;
-        const defaultTitle = selectedMessageText?.slice(0, 60) || t.thread_default_title || '';
-        const threadTitle = prompt(t.thread_prompt || '為討論串輸入標題', defaultTitle);
-        if (!threadTitle) return;
+        const defaultTitle = selectedMessageText?.slice(0, 60).trim() || t.thread_default_title || '';
+        const threadTitle = defaultTitle || 'Thread';
         socket.emit('create thread', { room: currentRoom, messageId: selectedMessageMid, title: threadTitle });
         closeContextMenu();
     });
@@ -195,8 +199,10 @@ cancelReplyBtn.addEventListener('click', () => {
 if (threadBackBtn) {
     threadBackBtn.addEventListener('click', () => {
         if (activeThreadParent) {
-            joinThreadRoom(activeThreadParent);
+            socket.emit('join room', { name: activeThreadParent });
+            return;
         }
+        backBtn.click();
     });
 }
 
@@ -263,14 +269,37 @@ function getRoomDisplayName(name) {
     return (room?.displayName || name);
 }
 
-function updateThreadBanner(parentRoom) {
+function updateThreadBanner(parentRoom, threadTitle = '') {
     if (!threadBanner || !threadParentName) return;
     if (parentRoom) {
         threadParentName.textContent = getRoomDisplayName(parentRoom);
         threadBanner.classList.remove('hidden');
+        threadBanner.dataset.threadTitle = threadTitle || '';
     } else {
         threadBanner.classList.add('hidden');
+        threadBanner.dataset.threadTitle = '';
     }
+}
+
+function applyThreadHint(element, data) {
+    if (!element) return;
+    const existing = element.querySelector('.thread-hint');
+    if (existing) existing.remove();
+    if (!data?.threadOpened) return;
+    const hint = document.createElement('div');
+    hint.className = 'thread-hint';
+    const baseText = data.threadRoom ? `🧵 討論串已開啟（${data.threadRoom}）` : '🧵 討論串已開啟';
+    hint.textContent = data.threadTitle ? `${baseText}：${data.threadTitle}` : baseText;
+    element.appendChild(hint);
+}
+
+function markMessageWithThread(messageId, info) {
+    if (!messageId) return;
+    const escapedId = (typeof CSS !== 'undefined' && CSS.escape) ? CSS.escape(messageId) : messageId;
+    const target = messages.querySelector(`[data-mid="${escapedId}"]`);
+    if (!target) return;
+    target.dataset.threadRoom = info?.threadRoom || '';
+    applyThreadHint(target, { threadOpened: true, threadRoom: info?.threadRoom, threadTitle: info?.threadTitle });
 }
 
 function updateTypingIndicator() {
@@ -321,6 +350,38 @@ function displayAdminToken(room, token) {
     const message = template.replace('{token}', token);
     addSystemMessage(message);
     pendingAdminTokens.delete(room);
+    showAdminKeyBanner(token);
+}
+
+function showAdminKeyBanner(token) {
+    if (!adminKeyBanner || !adminKeyText) return;
+    adminKeyText.textContent = token;
+    adminKeyBanner.classList.remove('hidden');
+}
+
+function hideAdminKeyBanner() {
+    if (!adminKeyBanner) return;
+    adminKeyBanner.classList.add('hidden');
+    if (adminKeyText) adminKeyText.textContent = '';
+}
+
+async function copyAdminKeyValue() {
+    if (!adminKeyText?.textContent) return;
+    try {
+        await copyToClipboard(adminKeyText.textContent);
+        addSystemMessage(t.system_copied || '已複製文字');
+    } catch (error) {
+        console.error('複製金鑰失敗', error);
+        addSystemMessage('❌ 複製金鑰失敗，請再試一次。');
+    }
+}
+
+if (adminKeyCopyBtn) {
+    adminKeyCopyBtn.addEventListener('click', copyAdminKeyValue);
+}
+
+if (adminKeyCloseBtn) {
+    adminKeyCloseBtn.addEventListener('click', hideAdminKeyBanner);
 }
 
 function clearTypingState() {
@@ -534,6 +595,10 @@ window.unlockMessage = function(btnElement, correctPassword, encodedContent) {
  */
 function addMessage(data, skipScroll = false) {
     const item = document.createElement('li');
+    const messageId = data.mid || data._id || '';
+    if (messageId) {
+        item.dataset.mid = messageId;
+    }
     const isMyMessage = data.id === localUserId;
 
     if (isMyMessage) {
@@ -781,7 +846,9 @@ backBtn.addEventListener('click', () => {
     sendTypingStatus(false);
     clearTypingState();
     activeThreadParent = null;
-    updateThreadBanner(null);
+    activeThreadTitle = '';
+    updateThreadBanner(null, '');
+    hideAdminKeyBanner();
 });
 
 /**
@@ -903,20 +970,24 @@ socket.on('join success', (roomInfo) => {
     const roomName = roomInfo?.name;
     const displayName = roomInfo?.displayName || roomName || '';
     currentRoom = roomName || '';
-    roomTitle.textContent = displayName;
+    const isThread = !!roomInfo?.isThread;
+    if (isThread) {
+        activeThreadParent = roomInfo.parentRoom || activeThreadParent;
+        activeThreadTitle = roomInfo.threadTitle || '';
+        roomTitle.textContent = `🧵 ${activeThreadTitle || displayName}`;
+        updateThreadBanner(activeThreadParent, activeThreadTitle);
+    } else {
+        activeThreadParent = null;
+        activeThreadTitle = '';
+        roomTitle.textContent = displayName;
+        updateThreadBanner(null, '');
+    }
     
     // 切換視圖到聊天室
     lobbyView.classList.add('hidden');
     chatView.classList.remove('hidden');
     if (roomName && pendingAdminTokens.has(roomName)) {
         displayAdminToken(roomName, pendingAdminTokens.get(roomName));
-    }
-    if (roomInfo?.isThread) {
-        activeThreadParent = roomInfo.parentRoom || activeThreadParent;
-        updateThreadBanner(activeThreadParent);
-    } else {
-        activeThreadParent = null;
-        updateThreadBanner(null);
     }
 });
 
@@ -932,9 +1003,7 @@ searchInput.addEventListener('input', renderRoomList);
 socket.on('room list', (rooms) => {
     allRooms = rooms; // 更新全域的房間列表
     renderRoomList(); // 根據列表與現有搜尋條件重新渲染
-    if (activeThreadParent) {
-        updateThreadBanner(activeThreadParent);
-    }
+    updateThreadBanner(activeThreadParent, activeThreadTitle);
 });
 
 socket.on('room admin token', (payload) => {
@@ -953,7 +1022,16 @@ socket.on('room create error', (errorKey) => {
 socket.on('thread ready', (payload) => {
     if (!payload || !payload.room) return;
     const parent = payload.parentRoom || currentRoom;
+    activeThreadTitle = payload.displayName || '';
     joinThreadRoom(payload.room, parent);
+});
+
+socket.on('thread status', (payload) => {
+    if (!payload || !payload.parentMessageId) return;
+    markMessageWithThread(payload.parentMessageId, {
+        threadRoom: payload.threadRoom,
+        threadTitle: payload.threadTitle
+    });
 });
 
 socket.on('room cleared', (payload) => {

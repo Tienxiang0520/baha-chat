@@ -160,6 +160,57 @@ body {
     color: #fff;
 }
 
+#admin-key-banner {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    margin: 8px 16px 0;
+    background-color: #fff3cd;
+    border: 1px solid #ffeeba;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    color: #856404;
+}
+
+#admin-key-banner.hidden {
+    display: none;
+}
+
+#admin-key-text {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+}
+
+.admin-key-copy,
+.admin-key-close {
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-size: 0.85rem;
+    padding: 4px 8px;
+    border-radius: 999px;
+    transition: background-color 0.2s;
+}
+
+.admin-key-copy {
+    background-color: rgba(133, 110, 38, 0.08);
+    color: #856404;
+}
+
+.admin-key-copy:hover {
+    background-color: rgba(133, 110, 38, 0.2);
+}
+
+.admin-key-close {
+    color: #856404;
+}
+
+.admin-key-close:hover {
+    background-color: rgba(0, 0, 0, 0.08);
+}
+
 #danmaku-container {
     position: absolute;
     top: 60px; /* 避開頂部標題 */
