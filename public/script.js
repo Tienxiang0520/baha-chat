@@ -274,6 +274,13 @@ function handleIncomingTyping(userId, typing) {
     updateTypingIndicator();
 }
 
+function clearTypingState() {
+    typingUsers.clear();
+    typingThrottles.forEach(id => clearTimeout(id));
+    typingThrottles.clear();
+    updateTypingIndicator();
+}
+
 /**
  * 增加系統提示訊息到畫面上
  */
@@ -702,6 +709,7 @@ backBtn.addEventListener('click', () => {
     replyingTo = null; // 重置回覆狀態
     replyPreview.classList.add('hidden');
     sendTypingStatus(false);
+    clearTypingState();
 });
 
 /**
@@ -835,6 +843,12 @@ socket.on('room list', (rooms) => {
     renderRoomList(); // 根據列表與現有搜尋條件重新渲染
 });
 
+socket.on('room admin token', (payload) => {
+    if (!payload || !payload.token) return;
+    const tokenMessage = t.room_admin_token_message?.replace('{token}', payload.token) || `建房者代碼：${payload.token}`;
+    addSystemMessage(tokenMessage);
+});
+
 // 處理表單提交
 form.addEventListener('submit', function(e) {
     e.preventDefault(); // 防止頁面重新整理
@@ -943,6 +957,11 @@ socket.on('disconnect', () => {
 socket.on('poll update', (update) => {
     if (!update) return;
     updatePollUI(update.pollId, update.options);
+});
+
+socket.on('typing status', (data) => {
+    if (!data) return;
+    handleIncomingTyping(data.userId, data.typing);
 });
 
 function updatePollUI(pollId, options) {

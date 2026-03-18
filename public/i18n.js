@@ -82,6 +82,7 @@ const translations = {
         sponsor_copied: '已複製贊助信箱',
         sponsor_paypal_action: '透過 PayPal 贊助',
         sponsor_paypal_hint: '愛心贊助 NT$30 元',
+        room_admin_token_message: '建立者代碼：{token}，請妥善保存，若遺失可透過 /auth 指令重新取得管理權。',
         sw_update_message: '已偵測到新版本，是否重新整理？',
         sw_update_button: '立即更新'
     },
@@ -167,6 +168,7 @@ const translations = {
         sponsor_copied: '已复制赞助邮箱',
         sponsor_paypal_action: '通过 PayPal 赞助',
         sponsor_paypal_hint: '爱心赞助 NT$30 元',
+        room_admin_token_message: '创建者代码：{token}，请妥善保存，丢失后可通过 /auth 指令找回管理员权限。',
         sw_update_message: '检测到新版本，是否重新加载？',
         sw_update_button: '立即更新'
     },
@@ -252,6 +254,7 @@ const translations = {
         sponsor_copied: 'Sponsor email copied',
         sponsor_paypal_action: 'Donate via PayPal',
         sponsor_paypal_hint: 'Heart support NT$30',
+        room_admin_token_message: 'Creator key: {token}. Save it somewhere safe—use /auth <key> if you need to reclaim admin privileges.',
         sw_update_message: 'A new version was detected. Reload now?',
         sw_update_button: 'Reload'
     },
@@ -337,6 +340,7 @@ const translations = {
         sponsor_copied: 'メールアドレスをコピーしました',
         sponsor_paypal_action: 'PayPal で支援する',
         sponsor_paypal_hint: 'ハート支援 NT$30',
+        room_admin_token_message: '作成者コード：{token} を保管してください。紛失した場合は /auth <コード> で管理権限を回復できます。',
         sw_update_message: '新しいバージョンがあります。リロードしますか？',
         sw_update_button: 'リロード'
     },
@@ -422,6 +426,7 @@ const translations = {
         sponsor_copied: '이메일 주소가 복사되었습니다',
         sponsor_paypal_action: 'PayPal 로 후원하기',
         sponsor_paypal_hint: '하트 후원 NT$30',
+        room_admin_token_message: '생성자 코드: {token}을 안전하게 보관하세요. 분실 시 /auth <코드>로 관리자 권한을 다시 얻을 수 있습니다.',
         sw_update_message: '새 버전이 감지되었습니다. 지금 새로고침하시겠어요?',
         sw_update_button: '새로고침'
     },
@@ -507,6 +512,7 @@ const translations = {
         sponsor_copied: 'Đã sao chép email hỗ trợ',
         sponsor_paypal_action: 'Ủng hộ qua PayPal',
         sponsor_paypal_hint: 'Ủng hộ trái tim NT$30',
+        room_admin_token_message: 'Mã người tạo: {token}. Hãy lưu lại cẩn thận, nếu mất chỉ cần dùng /auth <mã> để lấy lại quyền quản trị.',
         sw_update_message: 'Đã phát hiện phiên bản mới. Tải lại ngay?',
         sw_update_button: 'Tải lại'
     }

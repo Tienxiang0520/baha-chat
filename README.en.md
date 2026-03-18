@@ -75,6 +75,7 @@ The Markdown stack now layers on three plugin families:
 - `/party [text]`: Fullscreen confetti explosion, perfect for celebrations or welcoming!
 - `/quake [text]`: Fullscreen severe shaking, great for expressing shock or excitement!
 - `/poll <question> | <option1> | <option2> [...]`: Start a poll inside the room, which renders a live vote card; everyone’s clicks immediately update the counts.
+- `/auth <key>`: Room creators receive a `Baha-Admin-XXXX` key—use it to reclaim admin rights for that room if you revisit it later.
 - `typing indicator`: The chat footer shows who is typing (by their anonymous ID) so everyone knows when someone is composing a message.
 
 ## 💝 Support Baha

@@ -5,6 +5,7 @@ const { Server } = require('socket.io');
 const mongoose = require('mongoose');
 const nodemailer = require('nodemailer');
 const bcrypt = require('bcrypt');
+const crypto = require('crypto');
 const { MongoMemoryServer } = require('mongodb-memory-server');
 const { handleCommand } = require('./command-handler');
 const { LOAD_HISTORY_LIMIT } = require('./config');
@@ -123,6 +124,7 @@ io.on('connection', async (socket) => {
         : socket.id.substring(0, 6);
     socket.userId = userId;
     socket.isAdmin = false; // 預設為一般使用者
+    socket.adminRooms = new Set();
     socket.loginAttempts = 0; // 初始化登入嘗試次數
     socket.lockoutUntil = null; // 初始化鎖定時間
     console.log(`匿名使用者 ${userId} 已連線`);
@@ -163,7 +165,17 @@ io.on('connection', async (socket) => {
                 // 使用 bcrypt 加密密碼，10 是 saltRounds (加鹽與計算複雜度)
                 hashedPassword = await bcrypt.hash(password, 10);
             }
-            await Room.create({ name: roomName, createdAt: Date.now(), isLocked: !!password, password: hashedPassword });
+            const adminToken = `Baha-Admin-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
+            const adminTokenHash = await bcrypt.hash(adminToken, 10);
+            await Room.create({
+                name: roomName,
+                createdAt: Date.now(),
+                isLocked: !!password,
+                password: hashedPassword,
+                creatorId: socket.userId,
+                adminTokenHash
+            });
+            socket.emit('room admin token', { room: roomName, token: adminToken });
             // 廣播給所有人更新房間列表
             io.emit('room list', await getSortedRoomList());
         }
