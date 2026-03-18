@@ -4,13 +4,13 @@ const http = require('http');
 const { Server } = require('socket.io');
 const mongoose = require('mongoose');
 const nodemailer = require('nodemailer');
-const bcrypt = require('bcrypt');
-const crypto = require('crypto');
 const { MongoMemoryServer } = require('mongodb-memory-server');
 const { handleCommand } = require('./command-handler');
 const { LOAD_HISTORY_LIMIT } = require('./config');
-const { getPoll, votePoll } = require('./polls');
 const { getSortedRoomList } = require('./utils/room-list');
+const { registerRoomHandlers } = require('./sockets/room-handlers');
+const { registerThreadHandlers } = require('./sockets/thread-handlers');
+const { registerChatHandlers } = require('./sockets/chat-handlers');
 
 const app = express();
 const server = http.createServer(app);
@@ -48,7 +48,6 @@ connectDB();
 
 // 2. 載入資料庫模型 (Models)
 const Room = require('./models/Room');
-const Message = require('./models/Message');
 const Announcement = require('./models/Announcement');
 
 // 3. 確保預設的「綜合閒聊」大廳永遠存在
@@ -138,241 +137,9 @@ io.on('connection', async (socket) => {
     const announcements = await Announcement.find().sort({ createdAt: -1 }).limit(20);
     socket.emit('announcement list', announcements);
 
-    // 監聽建立新話題房間
-    socket.on('create room', async (data) => {
-        const roomName = typeof data === 'string' ? data : data.name;
-        const password = typeof data === 'object' ? data.password : null;
-
-        const existingRoom = await Room.findOne({ name: roomName });
-        if (existingRoom) {
-            socket.emit('room create error', 'room_name_taken');
-            return;
-        }
-
-        try {
-            let hashedPassword = null;
-            if (password) {
-                hashedPassword = await bcrypt.hash(password, 10);
-            }
-            const adminToken = `Baha-Admin-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
-            const adminTokenHash = await bcrypt.hash(adminToken, 10);
-            await Room.create({
-                name: roomName,
-                displayName: roomName,
-                createdAt: Date.now(),
-                isLocked: !!password,
-                password: hashedPassword,
-                creatorId: socket.userId,
-                adminTokenHash
-            });
-            socket.adminRooms.add(roomName);
-            socket.emit('room admin token', { room: roomName, token: adminToken });
-            io.emit('room list', await getSortedRoomList(io));
-        } catch (createError) {
-            console.error('建立房間失敗：', createError);
-            socket.emit('room create error', 'room_create_failed');
-        }
-    });
-
-    socket.on('create thread', async (data) => {
-        const roomName = data?.room;
-        const messageId = data?.messageId;
-        const title = (typeof data?.title === 'string' ? data.title.trim() : '').substring(0, 60);
-        if (!roomName || !messageId) return;
-        if (!socket.rooms.has(roomName)) return;
-        const parentMessage = await Message.findById(messageId);
-        if (!parentMessage) {
-            socket.emit('chat message', { id: 'System', text: '❌ 找不到該訊息，無法建立討論串。', timestamp: Date.now() });
-            return;
-        }
-
-        let threadRoom = await Room.findOne({ threadParentRoom: roomName, threadParentMessageId: messageId });
-        if (!threadRoom) {
-            const snippet = (parentMessage.text || '').replace(/\s+/g, ' ').trim().slice(0, 40) || 'Thread';
-            const displayName = title || `Thread：${snippet}`;
-            const threadName = `thread-${roomName}-${messageId}`;
-            try {
-                threadRoom = await Room.create({
-                    name: threadName,
-                    displayName,
-                    createdAt: Date.now(),
-                    isThread: true,
-                    threadParentRoom: roomName,
-                    threadParentMessageId: messageId,
-                    threadTitle: displayName
-                });
-            } catch (error) {
-                console.error('建立討論串失敗：', error);
-                threadRoom = await Room.findOne({ threadParentRoom: roomName, threadParentMessageId: messageId });
-                if (!threadRoom) {
-                    const fallback = await Room.findOne({ name: threadName });
-                    if (fallback && fallback.isThread) {
-                        threadRoom = fallback;
-                    }
-                }
-            }
-        }
-
-        if (!threadRoom) {
-            socket.emit('chat message', { id: 'System', text: '❌ 無法建立討論串，請稍後再試。', timestamp: Date.now() });
-            return;
-        }
-
-        if (parentMessage) {
-            parentMessage.threadOpened = true;
-            parentMessage.threadRoom = threadRoom.name;
-            try {
-                await parentMessage.save();
-            } catch (error) {
-                console.error('更新訊息討論串資料失敗：', error);
-            }
-        }
-
-        io.to(roomName).emit('thread status', {
-            parentMessageId: messageId,
-            threadRoom: threadRoom.name,
-            threadTitle: threadRoom.displayName
-        });
-
-        io.to(roomName).emit('chat message', {
-            id: 'System',
-            text: `🧵 討論串已建立：${threadRoom.displayName}`,
-            timestamp: Date.now(),
-            threadLink: { room: threadRoom.name, displayName: threadRoom.displayName }
-        });
-
-        socket.emit('thread ready', {
-            room: threadRoom.name,
-            displayName: threadRoom.displayName,
-            parentRoom: roomName
-        });
-    });
-
-    // 監聽加入房間
-    socket.on('join room', async (data) => {
-        const roomName = typeof data === 'string' ? data : data.name;
-        const password = typeof data === 'object' ? data.password : null;
-
-        const targetRoom = await Room.findOne({ name: roomName });
-        if (!targetRoom) {
-            socket.emit('join error', 'room_not_found');
-            return;
-        }
-        if (targetRoom.isLocked) {
-            // 使用 bcrypt 比對使用者輸入的密碼與資料庫中的加密密碼是否相符
-            const isMatch = await bcrypt.compare(password || '', targetRoom.password);
-            if (!isMatch) {
-                socket.emit('join error', 'wrong_password'); // 密碼錯誤
-                return;
-            }
-        }
-
-        if (targetRoom && targetRoom.bannedIds.includes(userId)) {
-            socket.emit('join error', 'room_banned');
-            return;
-        }
-
-        const roomsToKeep = new Set([socket.id, roomName]);
-        if (targetRoom?.isThread && targetRoom.threadParentRoom) {
-            roomsToKeep.add(targetRoom.threadParentRoom);
-        }
-        socket.rooms.forEach(room => {
-            if (!roomsToKeep.has(room)) socket.leave(room);
-        });
-        socket.join(roomName);
-        // 從資料庫撈取最新的歷史訊息，並反轉順序讓畫面由舊到新正常顯示
-        let messages = await Message.find({ roomName }).sort({ timestamp: -1 }).limit(LOAD_HISTORY_LIMIT);
-        messages = messages.reverse().map(msg => {
-            const converted = msg.toObject ? msg.toObject() : msg;
-            return { ...converted, mid: converted._id?.toString() };
-        });
-        socket.emit('chat history', messages);
-        // 廣播給所有人更新房間列表 (因為人數變動)
-        io.emit('room list', await getSortedRoomList(io));
-        
-        // 通知前端加入成功，可以切換畫面了
-        socket.emit('join success', {
-            name: roomName,
-            displayName: targetRoom?.displayName || roomName,
-            isThread: !!targetRoom?.isThread,
-            parentRoom: targetRoom?.threadParentRoom || null,
-            parentMessageId: targetRoom?.threadParentMessageId || null,
-            threadTitle: targetRoom?.threadTitle || null
-        });
-    });
-
-    // 監聽離開房間 (返回大廳時觸發)
-    socket.on('leave room', async (roomName) => {
-        socket.leave(roomName);
-        // 廣播給所有人更新房間列表
-        io.emit('room list', await getSortedRoomList(io));
-    });
-
-    // 監聽來自前端的 'chat message' 事件
-    socket.on('chat message', async (data) => {
-        const { room, text, useMarkdown, replyTo, effect } = data;
-        
-        // 【安全防護】檢查該使用者是否真的有成功加入這個房間（防止未輸入密碼者透過程式碼強行發送）
-        if (room && !socket.rooms.has(room)) {
-            return; 
-        }
-
-        if (room) {
-            const muteUntil = socket.mutedRooms.get(room);
-            if (muteUntil && muteUntil > Date.now()) {
-                socket.emit('chat message', { id: 'System', text: '❌ 你已被該房間管理員禁言，無法發送訊息。', timestamp: Date.now() });
-                return;
-            }
-            if (muteUntil) {
-                socket.mutedRooms.delete(room);
-            }
-        }
-
-        // 【指令處理】檢查訊息是否為指令，並將完整 data 傳入以取得 room 等資訊
-        const wasCommand = await handleCommand(socket, data);
-        if (wasCommand) {
-            return; // 攔截訊息，不當作一般聊天內容廣播
-        }
-        
-        // 檢查並抓取網址摘要
-        const preview = await fetchLinkPreview(text);
-        const messageData = { id: socket.userId, text: text, timestamp: Date.now(), useMarkdown: useMarkdown, replyTo: replyTo, effect: effect, linkPreview: preview };
-
-        const existingRoom = await Room.findOne({ name: room });
-        if (existingRoom) {
-            try {
-                const messageRecord = await Message.create({ roomName: room, ...messageData });
-                const outgoing = { ...messageData, mid: messageRecord._id.toString() };
-                io.to(room).emit('chat message', outgoing);
-            } catch (err) {
-                console.error('儲存訊息發生錯誤:', err);
-                socket.emit('chat message', { id: 'System', text: '❌ 系統錯誤，訊息傳送失敗。', timestamp: Date.now() });
-            }
-        }
-    });
-
-    socket.on('typing', (data) => {
-        const { room, typing } = data || {};
-        if (!room) return;
-        if (!socket.rooms.has(room)) return;
-        socket.to(room).emit('typing status', { userId: socket.userId, typing: !!typing });
-    });
-
-    // 監聽投票事件
-    socket.on('poll vote', (data) => {
-        const { pollId, optionIndex } = data || {};
-        if (!pollId || typeof optionIndex !== 'number') return;
-        const poll = getPoll(pollId);
-        if (!poll || !poll.room || !socket.rooms.has(poll.room)) return;
-
-        const updatedPoll = votePoll(pollId, socket.userId, optionIndex);
-        if (!updatedPoll) return;
-
-        socket.server.to(poll.room).emit('poll update', {
-            pollId: updatedPoll.id,
-            options: updatedPoll.options.map(option => ({ text: option.text, count: option.count }))
-        });
-    });
+    registerRoomHandlers(socket, io);
+    registerThreadHandlers(socket, io);
+    registerChatHandlers(socket, io, fetchLinkPreview, handleCommand);
 
     // 監聽使用者斷線
     socket.on('disconnect', () => {

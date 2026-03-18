@@ -35,9 +35,13 @@ const roomList = document.getElementById('room-list');
 const roomInput = document.getElementById('room-input');
 const createRoomBtn = document.getElementById('create-room-btn');
 const searchInput = document.getElementById('search-input');
+let boardSearchInputElement = null;
+let isSearchSyncing = false;
+let boardRoomListElement = null;
 const backBtn = document.getElementById('back-btn');
 const featuresBtn = document.getElementById('features-btn');
 const backFromFeaturesBtn = document.getElementById('back-from-features-btn');
+const boardFeaturesBtn = document.getElementById('board-features-btn');
 const tutorialBtn = document.getElementById('tutorial-btn');
 const backFromTutorialBtn = document.getElementById('back-from-tutorial-btn');
 const announcementBtn = document.getElementById('announcement-btn');
@@ -59,8 +63,6 @@ const replyPreview = document.getElementById('reply-preview');
 const replyPreviewUser = document.getElementById('reply-preview-user');
 const replyPreviewText = document.getElementById('reply-preview-text');
 const cancelReplyBtn = document.getElementById('cancel-reply-btn');
-const swUpdateBanner = document.getElementById('sw-update-banner');
-const swUpdateButton = document.getElementById('sw-update-btn');
 const typingIndicator = document.getElementById('typing-indicator');
 const pollElements = new Map();
 const pollVotes = new Map();
@@ -70,13 +72,15 @@ let isTyping = false;
 const typingUsers = new Map();
 const typingThrottles = new Map();
 const pendingAdminTokens = new Map();
-const threadBanner = document.getElementById('thread-banner');
-const threadParentName = document.getElementById('thread-parent-name');
-const threadBackBtn = document.getElementById('thread-back-btn');
-const adminKeyBanner = document.getElementById('admin-key-banner');
-const adminKeyText = document.getElementById('admin-key-text');
-const adminKeyCopyBtn = document.getElementById('admin-key-copy');
-const adminKeyCloseBtn = document.getElementById('admin-key-close');
+
+const desktopBoard = document.getElementById('desktop-board');
+const boardSurface = document.querySelector('.board-surface');
+const boardCanvas = document.getElementById('board-canvas');
+const boardPalette = document.getElementById('board-palette');
+const boardOpenPaletteBtn = document.getElementById('board-open-palette-btn');
+const boardResetBtn = document.getElementById('board-reset-btn');
+const boardPaletteButtons = boardPalette ? boardPalette.querySelectorAll('[data-board-module]') : [];
+const boardCustomForm = document.getElementById('board-custom-component-form');
 
 const form = document.getElementById('form');
 const input = document.getElementById('input');
@@ -98,6 +102,14 @@ featuresBtn.addEventListener('click', () => {
     featuresView.classList.remove('hidden');
     featuresDot.classList.add('hidden'); // 點開功能選單時消除右上角紅點
 });
+
+if (boardFeaturesBtn) {
+    boardFeaturesBtn.addEventListener('click', () => {
+        lobbyView.classList.add('hidden');
+        featuresView.classList.remove('hidden');
+        featuresDot.classList.add('hidden');
+    });
+}
 
 backFromFeaturesBtn.addEventListener('click', () => {
     featuresView.classList.add('hidden');
@@ -196,15 +208,13 @@ cancelReplyBtn.addEventListener('click', () => {
     replyPreview.classList.add('hidden');
 });
 
-if (threadBackBtn) {
-    threadBackBtn.addEventListener('click', () => {
-        if (activeThreadParent) {
-            socket.emit('join room', { name: activeThreadParent });
-            return;
-        }
-        backBtn.click();
-    });
-}
+window.ThreadUI?.setBackCallback(() => {
+    if (activeThreadParent) {
+        socket.emit('join room', { name: activeThreadParent });
+        return;
+    }
+    backBtn.click();
+});
 
 if (sponsorCopyEmailBtn) {
     sponsorCopyEmailBtn.addEventListener('click', async () => {
@@ -219,6 +229,25 @@ if (sponsorCopyEmailBtn) {
         }
     });
 }
+
+function attemptCreateRoom() {
+    const rawName = roomInput?.value || '';
+    const name = rawName.trim();
+    if (!name) return;
+    socket.emit('create room', { name });
+    roomInput.value = '';
+}
+
+createRoomBtn?.addEventListener('click', () => {
+    attemptCreateRoom();
+});
+
+roomInput?.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        attemptCreateRoom();
+    }
+});
 // ===============================
 
 // 自動偵測瀏覽器語言
@@ -267,18 +296,6 @@ function stringToColor(str) {
 function getRoomDisplayName(name) {
     const room = allRooms.find(r => r.name === name);
     return (room?.displayName || name);
-}
-
-function updateThreadBanner(parentRoom, threadTitle = '') {
-    if (!threadBanner || !threadParentName) return;
-    if (parentRoom) {
-        threadParentName.textContent = getRoomDisplayName(parentRoom);
-        threadBanner.classList.remove('hidden');
-        threadBanner.dataset.threadTitle = threadTitle || '';
-    } else {
-        threadBanner.classList.add('hidden');
-        threadBanner.dataset.threadTitle = '';
-    }
 }
 
 function applyThreadHint(element, data) {
@@ -350,39 +367,9 @@ function displayAdminToken(room, token) {
     const message = template.replace('{token}', token);
     addSystemMessage(message);
     pendingAdminTokens.delete(room);
-    showAdminKeyBanner(token);
+    window.AdminKeyBanner?.show(token);
 }
 
-function showAdminKeyBanner(token) {
-    if (!adminKeyBanner || !adminKeyText) return;
-    adminKeyText.textContent = token;
-    adminKeyBanner.classList.remove('hidden');
-}
-
-function hideAdminKeyBanner() {
-    if (!adminKeyBanner) return;
-    adminKeyBanner.classList.add('hidden');
-    if (adminKeyText) adminKeyText.textContent = '';
-}
-
-async function copyAdminKeyValue() {
-    if (!adminKeyText?.textContent) return;
-    try {
-        await copyToClipboard(adminKeyText.textContent);
-        addSystemMessage(t.system_copied || '已複製文字');
-    } catch (error) {
-        console.error('複製金鑰失敗', error);
-        addSystemMessage('❌ 複製金鑰失敗，請再試一次。');
-    }
-}
-
-if (adminKeyCopyBtn) {
-    adminKeyCopyBtn.addEventListener('click', copyAdminKeyValue);
-}
-
-if (adminKeyCloseBtn) {
-    adminKeyCloseBtn.addEventListener('click', hideAdminKeyBanner);
-}
 
 function clearTypingState() {
     typingUsers.clear();
@@ -450,20 +437,474 @@ async function copyToClipboard(text) {
     textarea.remove();
 }
 
-/**
- * 輕量級 Markdown 解析器 (支援 Discord 常用語法)
- */
-function escapeHTML(str) {
-    return str.replace(/[&<>'"]/g, 
-        tag => ({
-            '&': '&amp;',
-            '<': '&lt;',
-            '>': '&gt;',
-            "'": '&#39;',
-            '"': '&quot;'
-        }[tag] || tag)
-    );
+function isDesktopBoardActive() {
+    return window.innerWidth >= 1200;
 }
+
+function updateDesktopBoardVisibility() {
+    if (!desktopBoard) return;
+    const shouldShow = isDesktopBoardActive();
+    desktopBoard.classList.toggle('hidden', !shouldShow);
+}
+
+const BOARD_STORAGE_KEY = 'baha-desktop-board-modules';
+const BOARD_MIN_CANVAS_WIDTH = 2600;
+const BOARD_MIN_CANVAS_HEIGHT = 1800;
+const BOARD_DEFAULT_MODULES = [
+    { id: 'board-create-room', type: 'create-room', x: 24, y: 24, width: 280, height: 200, data: { title: '建立房間', subtitle: '快速開啟一個新話題' }, removable: true, resizable: true },
+    { id: 'board-search', type: 'search', x: 320, y: 24, width: 280, height: 170, data: { title: '搜尋話題', subtitle: '支援 /hot、/lock 等指令' }, removable: true, resizable: true },
+    { id: 'board-rooms', type: 'rooms', x: 616, y: 24, width: 280, height: 240, data: { title: '熱門房間', subtitle: '直接在白板挑選' }, removable: true, resizable: true },
+    { id: 'board-actions', type: 'actions', x: 24, y: 260, width: 360, height: 190, data: { title: '快速指令', subtitle: '常用管理與互動指令' }, removable: true, resizable: true },
+    { id: 'board-sponsor', type: 'sponsor', x: 412, y: 260, width: 280, height: 170, data: { title: '支持開發', subtitle: '每份贊助都讓 Baha 更穩定' }, removable: true, resizable: true }
+];
+const MODULE_MIN_WIDTH = 220;
+const MODULE_MIN_HEIGHT = 160;
+const BOARD_ACTIONS = [
+    { command: '/poll', description: '發起話題投票' },
+    { command: '/canvas', description: '分享白板連結' },
+    { command: '/thread', description: '延伸為討論串' },
+    { command: '/announce', description: '發布系統公告' },
+    { command: '/kick', description: '踢出惡意使用者' }
+];
+const BOARD_MODULE_TITLES = {
+    'create-room': '建立房間',
+    'search': '搜尋話題',
+    'rooms': '房間列表',
+    'actions': '快速指令',
+    'sponsor': '支持開發'
+};
+
+let boardModules = [];
+
+function refreshBoardCanvasSize() {
+    if (!boardCanvas) return;
+    let requiredWidth = BOARD_MIN_CANVAS_WIDTH;
+    let requiredHeight = BOARD_MIN_CANVAS_HEIGHT;
+    boardModules.forEach(module => {
+        const moduleWidth = module.width || 280;
+        const moduleHeight = module.height || 180;
+        requiredWidth = Math.max(requiredWidth, module.x + moduleWidth + 200);
+        requiredHeight = Math.max(requiredHeight, module.y + moduleHeight + 200);
+    });
+    boardCanvas.style.width = `${requiredWidth}px`;
+    boardCanvas.style.height = `${requiredHeight}px`;
+}
+
+function initBoardPanning() {
+    if (!boardSurface) return;
+    let isPanning = false;
+    let startX = 0;
+    let startY = 0;
+    let baseScrollLeft = 0;
+    let baseScrollTop = 0;
+
+    const endPan = () => {
+        if (!isPanning) return;
+        isPanning = false;
+        boardSurface.classList.remove('board-surface--panning');
+    };
+
+    boardSurface.addEventListener('contextmenu', (event) => {
+        if (event.target.closest('.board-module')) return;
+        event.preventDefault();
+    });
+
+    boardSurface.addEventListener('pointerdown', (event) => {
+        if (event.button !== 2) return;
+        if (event.target.closest('.board-module')) return;
+        event.preventDefault();
+        isPanning = true;
+        startX = event.clientX;
+        startY = event.clientY;
+        baseScrollLeft = boardSurface.scrollLeft;
+        baseScrollTop = boardSurface.scrollTop;
+        boardSurface.classList.add('board-surface--panning');
+    });
+
+    window.addEventListener('pointermove', (event) => {
+        if (!isPanning) return;
+        event.preventDefault();
+        const dx = event.clientX - startX;
+        const dy = event.clientY - startY;
+        boardSurface.scrollLeft = baseScrollLeft - dx;
+        boardSurface.scrollTop = baseScrollTop - dy;
+        startX = event.clientX;
+        startY = event.clientY;
+        baseScrollLeft = boardSurface.scrollLeft;
+        baseScrollTop = boardSurface.scrollTop;
+    });
+
+    window.addEventListener('pointerup', (event) => {
+        if (event.button === 2) {
+            endPan();
+        }
+    });
+
+    boardSurface.addEventListener('pointerleave', () => {
+        endPan();
+    });
+}
+
+function loadBoardModules() {
+    if (!boardCanvas) return;
+    const stored = localStorage.getItem(BOARD_STORAGE_KEY);
+    if (stored) {
+        try {
+            const parsed = JSON.parse(stored);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+                boardModules = parsed.map(module => ({
+                    ...module,
+                    data: module.data ? { ...module.data } : {}
+                }));
+                return;
+            }
+        } catch (error) {
+            console.error('解析桌面白板設定失敗', error);
+        }
+    }
+    boardModules = BOARD_DEFAULT_MODULES.map(module => ({
+        ...module,
+        data: module.data ? { ...module.data } : {}
+    }));
+}
+
+function saveBoardModules() {
+    if (!boardCanvas) return;
+    localStorage.setItem(BOARD_STORAGE_KEY, JSON.stringify(boardModules));
+}
+
+function resetBoardModules() {
+    boardModules = BOARD_DEFAULT_MODULES.map(module => ({
+        ...module,
+        data: module.data ? { ...module.data } : {}
+    }));
+    saveBoardModules();
+    renderBoardModules();
+}
+
+function createBoardModuleElement(module) {
+    const wrapper = document.createElement('section');
+    wrapper.className = `board-module board-module--${module.type}`;
+    wrapper.dataset.moduleId = module.id;
+    wrapper.style.left = `${module.x}px`;
+    wrapper.style.top = `${module.y}px`;
+    if (module.width) wrapper.style.width = `${module.width}px`;
+    if (module.height) wrapper.style.height = `${module.height}px`;
+
+    const handle = document.createElement('header');
+    handle.className = 'board-module-handle';
+    const title = document.createElement('span');
+    title.textContent = module.data?.title || BOARD_MODULE_TITLES[module.type] || '白板模組';
+    handle.appendChild(title);
+
+    if (module.removable) {
+        const removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.className = 'board-module-remove';
+        removeBtn.textContent = '✕';
+        removeBtn.setAttribute('aria-label', '移除模組');
+        removeBtn.title = '移除模組';
+        removeBtn.addEventListener('click', (event) => {
+            event.stopPropagation();
+            boardModules = boardModules.filter(item => item.id !== module.id);
+            setTimeout(() => {
+                saveBoardModules();
+                renderBoardModules();
+            }, 0);
+        });
+        handle.appendChild(removeBtn);
+    }
+
+    wrapper.appendChild(handle);
+    const body = document.createElement('div');
+    body.className = 'board-module-body';
+
+    switch (module.type) {
+        case 'create-room': {
+            const subtitle = document.createElement('p');
+            subtitle.textContent = module.data?.subtitle || '輸入名稱即可建立';
+            body.appendChild(subtitle);
+            const form = document.createElement('form');
+            form.className = 'board-module-form';
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.placeholder = t.board_create_placeholder || '輸入房間名稱';
+            const button = document.createElement('button');
+            button.type = 'submit';
+            button.textContent = t.board_create_button || '立即建立';
+            form.appendChild(input);
+            form.appendChild(button);
+            form.addEventListener('submit', (event) => {
+                event.preventDefault();
+                const value = (input.value || '').trim();
+                if (!value) return;
+                socket.emit('create room', { name: value });
+                input.value = '';
+            });
+            body.appendChild(form);
+            break;
+        }
+        case 'search': {
+            const subtitle = document.createElement('p');
+            subtitle.textContent = module.data?.subtitle || '支援搜尋指令';
+            body.appendChild(subtitle);
+            const input = document.createElement('input');
+            input.type = 'search';
+            input.className = 'board-module-search-input';
+            input.placeholder = t.board_search_placeholder || '搜尋話題 /hot /lock';
+            input.value = searchInput?.value || '';
+            input.addEventListener('input', (event) => {
+                handleSearchTermChange(event.target.value, 'board');
+            });
+            boardSearchInputElement = input;
+            body.appendChild(input);
+            break;
+        }
+        case 'rooms': {
+            const subtitle = document.createElement('p');
+            subtitle.textContent = module.data?.subtitle || '雙欄同步顯示';
+            body.appendChild(subtitle);
+            const list = document.createElement('ul');
+            list.className = 'board-room-list';
+            boardRoomListElement = list;
+            body.appendChild(list);
+            break;
+        }
+        case 'actions': {
+            const subtitle = document.createElement('p');
+            subtitle.textContent = module.data?.subtitle || '互動 / 維護 指令';
+            body.appendChild(subtitle);
+            const actionList = document.createElement('div');
+            actionList.className = 'board-module-actions';
+            BOARD_ACTIONS.forEach(item => {
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.innerHTML = `<strong>${item.command}</strong> <span>${item.description}</span>`;
+                button.addEventListener('click', () => {
+                    addSystemMessage(`指令提示：輸入 ${item.command}`);
+                });
+                actionList.appendChild(button);
+            });
+            body.appendChild(actionList);
+            break;
+        }
+        case 'sponsor': {
+            const subtitle = document.createElement('p');
+            subtitle.textContent = module.data?.subtitle || '每份贊助都很重要';
+            body.appendChild(subtitle);
+            const email = document.createElement('div');
+            email.className = 'board-module-sponsor';
+            email.innerHTML = `<strong>Email</strong><span>pudding050@gmail.com</span>`;
+            body.appendChild(email);
+            const link = document.createElement('a');
+            link.href = 'https://www.paypal.com/ncp/payment/VADFCCNV65CQQ';
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+            link.textContent = '愛心贊助 NT$30';
+            body.appendChild(link);
+            break;
+        }
+        case 'custom':
+        default: {
+            const content = document.createElement('div');
+            content.innerHTML = escapeHTML(module.data?.content || '').replace(/\n/g, '<br>');
+            body.appendChild(content);
+            break;
+        }
+    }
+
+    wrapper.appendChild(body);
+    if (module.resizable !== false) {
+        const resizer = document.createElement('span');
+        resizer.className = 'board-module-resizer';
+        wrapper.appendChild(resizer);
+        attachModuleResize(resizer, wrapper, module);
+    }
+    attachBoardDrag(handle, wrapper, module);
+    return wrapper;
+}
+
+function attachBoardDrag(handle, moduleEl, module) {
+    if (!handle || !moduleEl) return;
+    let dragging = false;
+    let startX = 0;
+    let startY = 0;
+    let originX = module.x;
+    let originY = module.y;
+
+    const onPointerMove = (event) => {
+        if (!dragging) return;
+        const canvasWidth = boardCanvas?.clientWidth || boardCanvas?.offsetWidth || 0;
+        const canvasHeight = boardCanvas?.clientHeight || boardCanvas?.offsetHeight || 0;
+        const moduleWidth = moduleEl.offsetWidth;
+        const moduleHeight = moduleEl.offsetHeight;
+        const dx = event.clientX - startX;
+        const dy = event.clientY - startY;
+        module.x = Math.max(originX + dx, 0);
+        module.y = Math.max(originY + dy, 0);
+        moduleEl.style.left = `${module.x}px`;
+        moduleEl.style.top = `${module.y}px`;
+        refreshBoardCanvasSize();
+    };
+
+    const onPointerUp = () => {
+        if (!dragging) return;
+        dragging = false;
+        document.body.style.userSelect = '';
+        window.removeEventListener('pointermove', onPointerMove);
+        window.removeEventListener('pointerup', onPointerUp);
+        saveBoardModules();
+    };
+
+    handle.addEventListener('pointerdown', (event) => {
+        if (event.button !== 0) return;
+        event.preventDefault();
+        dragging = true;
+        startX = event.clientX;
+        startY = event.clientY;
+        originX = module.x;
+        originY = module.y;
+        document.body.style.userSelect = 'none';
+        window.addEventListener('pointermove', onPointerMove);
+        window.addEventListener('pointerup', onPointerUp);
+    });
+}
+
+function attachModuleResize(resizer, moduleEl, module) {
+    if (!resizer || !moduleEl) return;
+    let resizing = false;
+    let startX = 0;
+    let startY = 0;
+    let startWidth = 0;
+    let startHeight = 0;
+
+    const cancel = () => {
+        if (!resizing) return;
+        resizing = false;
+        moduleEl.classList.remove('board-module--resizing');
+    };
+
+    resizer.addEventListener('pointerdown', (event) => {
+        event.stopPropagation();
+        event.preventDefault();
+        resizing = true;
+        startX = event.clientX;
+        startY = event.clientY;
+        startWidth = module.width || moduleEl.offsetWidth;
+        startHeight = module.height || moduleEl.offsetHeight;
+        moduleEl.classList.add('board-module--resizing');
+        window.addEventListener('pointermove', onMove);
+        window.addEventListener('pointerup', onUp);
+    });
+
+    const onMove = (event) => {
+        if (!resizing) return;
+        const deltaX = event.clientX - startX;
+        const deltaY = event.clientY - startY;
+        const newWidth = Math.max(MODULE_MIN_WIDTH, startWidth + deltaX);
+        const newHeight = Math.max(MODULE_MIN_HEIGHT, startHeight + deltaY);
+        module.width = newWidth;
+        module.height = newHeight;
+        moduleEl.style.width = `${newWidth}px`;
+        moduleEl.style.height = `${newHeight}px`;
+        refreshBoardCanvasSize();
+    };
+
+    const onUp = () => {
+        cancel();
+        window.removeEventListener('pointermove', onMove);
+        window.removeEventListener('pointerup', onUp);
+        saveBoardModules();
+    };
+}
+
+function renderBoardModules() {
+    if (!boardCanvas) return;
+    boardCanvas.innerHTML = '';
+    boardRoomListElement = null;
+    boardSearchInputElement = null;
+    boardModules.forEach(module => {
+        const moduleEl = createBoardModuleElement(module);
+        boardCanvas.appendChild(moduleEl);
+    });
+    refreshBoardCanvasSize();
+    renderRoomList();
+}
+
+function createModuleFromType(type) {
+    const index = boardModules.length;
+    const offset = 36 + (index % 3) * 20;
+    return {
+        id: `${type}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        type,
+        x: offset + 20,
+        y: offset + 20,
+        width: 280,
+        height: 180,
+        data: {
+            title: BOARD_MODULE_TITLES[type] || '自訂模組'
+        },
+        removable: true
+    };
+}
+
+function toggleBoardPalette(show) {
+    if (!boardPalette) return;
+    const isHidden = boardPalette.classList.contains('hidden');
+    const shouldShow = typeof show === 'boolean' ? show : isHidden;
+    boardPalette.classList.toggle('hidden', !shouldShow);
+}
+
+function handlePaletteSelection(event) {
+    const button = event.currentTarget;
+    const type = button?.dataset?.boardModule;
+    if (!type) return;
+    boardModules.push(createModuleFromType(type));
+    saveBoardModules();
+    renderBoardModules();
+    toggleBoardPalette(false);
+}
+
+function handleCustomModuleSubmit(event) {
+    event.preventDefault();
+    const titleInput = event.target.querySelector('input[name="title"]');
+    const contentInput = event.target.querySelector('textarea[name="content"]');
+    if (!titleInput || !contentInput) return;
+    const title = titleInput.value.trim();
+    const content = contentInput.value.trim();
+    if (!title || !content) return;
+    boardModules.push({
+        id: `custom-${Date.now()}`,
+        type: 'custom',
+        x: 40,
+        y: 40,
+        width: 320,
+        height: 200,
+        data: { title, content },
+        removable: true
+    });
+    saveBoardModules();
+    renderBoardModules();
+    event.target.reset();
+    toggleBoardPalette(false);
+}
+
+function initializeBoard() {
+    if (!boardCanvas || !desktopBoard || !boardSurface) return;
+    loadBoardModules();
+    boardOpenPaletteBtn?.addEventListener('click', () => toggleBoardPalette());
+    boardResetBtn?.addEventListener('click', () => resetBoardModules());
+    boardPaletteButtons.forEach(button => {
+        button.addEventListener('click', handlePaletteSelection);
+    });
+    boardCustomForm?.addEventListener('submit', handleCustomModuleSubmit);
+    renderBoardModules();
+    initBoardPanning();
+}
+
+/**
+ * Markdown parser setup (使用 markdown-it 與 DOMPurify 處理輸出)
+ */
 
 const markdownParser = window.markdownit?.({
     html: false,
@@ -804,24 +1245,32 @@ function formatTimeAgo(timestamp) {
 }
 
 // 建立新話題房間
-createRoomBtn.addEventListener('click', () => {
-    const inputValue = roomInput.value.trim();
-    if (inputValue) {
-        let roomName = inputValue;
-        let password = null;
-        
-        // 檢查是否使用 /lock 指令建立密碼房
-        if (inputValue.startsWith('/lock ')) {
-            const parts = inputValue.split(' ');
-            if (parts.length >= 3) {
-                password = parts[1];
-                roomName = parts.slice(2).join(' '); // 剩下的字串都是房間名稱
-            }
-        }
-
-        socket.emit('create room', { name: roomName, password: password });
-        roomInput.value = '';
+function attemptRoomCreation(rawValue, sourceInput) {
+    const trimmed = rawValue?.trim() || '';
+    if (trimmed.length === 0) {
+        return false;
     }
+    let roomName = trimmed;
+    let password = null;
+
+    // 檢查是否使用 /lock 指令建立密碼房
+    if (trimmed.startsWith('/lock ')) {
+        const parts = trimmed.split(' ');
+        if (parts.length >= 3) {
+            password = parts[1];
+            roomName = parts.slice(2).join(' ');
+        }
+    }
+
+    socket.emit('create room', { name: roomName, password: password });
+    if (sourceInput) {
+        sourceInput.value = '';
+    }
+    return true;
+}
+
+createRoomBtn.addEventListener('click', () => {
+    attemptRoomCreation(roomInput.value, roomInput);
 });
 
 // 讓使用者在建立話題輸入框按 Enter 也能建立
@@ -847,20 +1296,57 @@ backBtn.addEventListener('click', () => {
     clearTypingState();
     activeThreadParent = null;
     activeThreadTitle = '';
-    updateThreadBanner(null, '');
-    hideAdminKeyBanner();
+    window.ThreadUI?.hide();
+    window.AdminKeyBanner?.hide();
 });
 
 /**
  * 根據搜尋條件渲染房間列表
  */
+function createRoomListItem(room) {
+    const li = document.createElement('li');
+    const displayName = room.displayName || room.name;
+    const nameSpan = document.createElement('span');
+    nameSpan.className = 'room-name-text';
+    nameSpan.textContent = `${room.isLocked ? '🔒' : '💬'} ${displayName}`;
+
+    const infoSpan = document.createElement('span');
+    infoSpan.className = 'room-info';
+
+    const userCountSpan = document.createElement('span');
+    userCountSpan.className = 'room-user-count';
+    userCountSpan.textContent = `👤 ${room.userCount}`;
+
+    const timeSpan = document.createElement('span');
+    timeSpan.className = 'room-timestamp';
+    timeSpan.textContent = formatTimeAgo(room.createdAt);
+
+    li.appendChild(nameSpan);
+    infoSpan.appendChild(userCountSpan);
+    infoSpan.appendChild(timeSpan);
+    li.appendChild(infoSpan);
+
+    li.addEventListener('click', () => {
+        let password = null;
+        if (room.isLocked) {
+            password = prompt(t.prompt_password);
+            if (password === null) return;
+        }
+        socket.emit('join room', { name: room.name, password: password });
+    });
+    return li;
+}
+
 function renderRoomList() {
     let searchTerm = searchInput.value.toLowerCase().trim();
-    roomList.innerHTML = '';
+    const targetLists = [roomList];
+    if (boardRoomListElement) {
+        targetLists.push(boardRoomListElement);
+    }
+    targetLists.forEach(list => list.innerHTML = '');
 
-    // 1. 偵測特殊搜尋指令
     let sortByHot = false;
-    let filterLocked = null; // null: 不過濾, true: 只要密碼房, false: 只要公開房
+    let filterLocked = null;
 
     if (searchTerm.includes('/hot')) {
         sortByHot = true;
@@ -874,7 +1360,6 @@ function renderRoomList() {
         searchTerm = searchTerm.replace('/open', '').trim();
     }
 
-    // 2. 文字過濾
     let filteredRooms = allRooms.filter(room => {
         const displayName = (room.displayName || room.name).toLowerCase();
         const rawName = room.name.toLowerCase();
@@ -883,58 +1368,23 @@ function renderRoomList() {
 
     filteredRooms = filteredRooms.filter(room => !room.isThread);
 
-    // 3. 狀態過濾 (上鎖/公開)
     if (filterLocked !== null) {
-        // 加上 !! 確保以前建立的舊房間 (isLocked 為 undefined) 也能被當作公開房
         filteredRooms = filteredRooms.filter(room => !!room.isLocked === filterLocked);
     }
 
-    // 4. 排序 (預設最新，若有 /hot 則按人數最多)
     if (sortByHot) {
         filteredRooms.sort((a, b) => {
             if (b.userCount !== a.userCount) {
                 return b.userCount - a.userCount;
             }
-            return b.createdAt - a.createdAt; // 人數相同時，新房間排前面
+            return b.createdAt - a.createdAt;
         });
     } else {
         filteredRooms.sort((a, b) => b.createdAt - a.createdAt);
     }
 
     filteredRooms.forEach(room => {
-        const li = document.createElement('li');
-
-        const displayName = room.displayName || room.name;
-        const nameSpan = document.createElement('span');
-        nameSpan.className = 'room-name-text';
-        nameSpan.textContent = `${room.isLocked ? '🔒' : '💬'} ${displayName}`;
-
-        const infoSpan = document.createElement('span');
-        infoSpan.className = 'room-info';
-
-        const userCountSpan = document.createElement('span');
-        userCountSpan.className = 'room-user-count';
-        userCountSpan.textContent = `👤 ${room.userCount}`;
-
-        const timeSpan = document.createElement('span');
-        timeSpan.className = 'room-timestamp';
-        timeSpan.textContent = formatTimeAgo(room.createdAt);
-
-        li.appendChild(nameSpan);
-
-        infoSpan.appendChild(userCountSpan);
-        infoSpan.appendChild(timeSpan);
-        li.appendChild(infoSpan);
-
-        li.addEventListener('click', () => {
-            let password = null;
-            if (room.isLocked) {
-                password = prompt(t.prompt_password);
-                if (password === null) return; // 使用者按了取消
-            }
-            socket.emit('join room', { name: room.name, password: password });
-        });
-        roomList.appendChild(li);
+        targetLists.forEach(list => list.appendChild(createRoomListItem(room)));
     });
 }
 
@@ -975,13 +1425,12 @@ socket.on('join success', (roomInfo) => {
         activeThreadParent = roomInfo.parentRoom || activeThreadParent;
         activeThreadTitle = roomInfo.threadTitle || '';
         roomTitle.textContent = `🧵 ${activeThreadTitle || displayName}`;
-        updateThreadBanner(activeThreadParent, activeThreadTitle);
     } else {
         activeThreadParent = null;
         activeThreadTitle = '';
         roomTitle.textContent = displayName;
-        updateThreadBanner(null, '');
     }
+    window.ThreadUI?.update(activeThreadParent, getRoomDisplayName(activeThreadParent), activeThreadTitle);
     
     // 切換視圖到聊天室
     lobbyView.classList.add('hidden');
@@ -997,13 +1446,27 @@ socket.on('join error', (errorKey) => {
 });
 
 // 監聽搜尋框的輸入事件
-searchInput.addEventListener('input', renderRoomList);
+searchInput.addEventListener('input', (e) => handleSearchTermChange(e.target.value, 'native'));
+
+function handleSearchTermChange(value, origin) {
+    if (isSearchSyncing) return;
+    isSearchSyncing = true;
+    const normalized = value || '';
+    if (origin !== 'native') {
+        searchInput.value = normalized;
+    }
+    if (origin !== 'board' && boardSearchInputElement) {
+        boardSearchInputElement.value = normalized;
+    }
+    renderRoomList();
+    isSearchSyncing = false;
+}
 
 // 監聽伺服器廣播的房間列表並更新大廳
 socket.on('room list', (rooms) => {
     allRooms = rooms; // 更新全域的房間列表
     renderRoomList(); // 根據列表與現有搜尋條件重新渲染
-    updateThreadBanner(activeThreadParent, activeThreadTitle);
+    window.ThreadUI?.update(activeThreadParent, getRoomDisplayName(activeThreadParent), activeThreadTitle);
 });
 
 socket.on('room admin token', (payload) => {
@@ -1198,42 +1661,271 @@ function highlightPollSelection(pollId) {
     });
 }
 
-if ('serviceWorker' in navigator) {
-    let isReloading = false;
+const SIDE_PANEL_BREAKPOINT = 1024;
+const SIDE_PANEL_DEFINITIONS = {
+    lobby: {
+        storageKey: 'baha-side-panel-lobby',
+        defaults: [
+            {
+                id: 'desktop-guide',
+                title: '更適合桌機的大廳',
+                content: '拖曳視窗可以讓左側話題列表與右側資料同步顯示，保留 16:9 的閱讀節奏。'
+            },
+            {
+                id: 'desktop-shortcuts',
+                title: '快速捷徑',
+                content: '/rooms︰顯示所有開放話題\n/hot︰只看熱門\n/announce︰查看公告'
+            },
+            {
+                id: 'desktop-support',
+                title: '💖 支持開發',
+                content: '桌機用戶可以直接透過 PayPal 送出 NT$30 的愛心贊助，感謝每一份支持。'
+            }
+        ]
+    },
+    chat: {
+        storageKey: 'baha-side-panel-chat',
+        defaults: [
+            {
+                id: 'chat-quick',
+                title: '頻道速查',
+                content: '/poll：建立投票\n/announce：發布公告\n/thread：延伸討論'
+            },
+            {
+                id: 'chat-announcements',
+                title: '最新公告',
+                content: '系統會同步公告，房主可用 /rename、/clear 立即調整房間狀態。'
+            }
+        ]
+    }
+};
 
-    navigator.serviceWorker.addEventListener('controllerchange', () => {
-        if (isReloading) return;
-        isReloading = true;
-        window.location.reload();
+const sidePanelState = {};
+let panelResizeTimer = null;
+
+function isDesktopPanel() {
+    return window.innerWidth >= SIDE_PANEL_BREAKPOINT;
+}
+
+function loadSidePanelConfig(panelId) {
+    const definition = SIDE_PANEL_DEFINITIONS[panelId];
+    if (!definition) return [];
+    const stored = localStorage.getItem(definition.storageKey);
+    if (stored) {
+        try {
+            const parsed = JSON.parse(stored);
+            if (Array.isArray(parsed)) return parsed;
+        } catch (error) {
+            console.error('解析 side panel 設定失敗', error);
+        }
+    }
+    return definition.defaults.map(card => ({ ...card }));
+}
+
+function saveSidePanelConfig(panelId) {
+    const definition = SIDE_PANEL_DEFINITIONS[panelId];
+    if (!definition) return;
+    localStorage.setItem(definition.storageKey, JSON.stringify(sidePanelState[panelId] || []));
+}
+
+function renderSidePanel(panelId) {
+    const panelEl = document.querySelector(`.side-panel[data-panel-id="${panelId}"]`);
+    if (!panelEl) return;
+    const listEl = panelEl.querySelector('.side-card-list');
+    if (!listEl) return;
+    listEl.innerHTML = '';
+    sidePanelState[panelId] = sidePanelState[panelId] || [];
+    sidePanelState[panelId].forEach(card => {
+        listEl.appendChild(createSideCardElement(card, panelId));
+    });
+    updatePanelInteractions();
+}
+
+function createSideCardElement(card, panelId) {
+    const article = document.createElement('article');
+    article.className = 'side-card draggable-side-card';
+    article.dataset.cardId = card.id;
+    article.draggable = isDesktopPanel();
+
+    const header = document.createElement('div');
+    header.className = 'side-card-header';
+    const title = document.createElement('h3');
+    title.textContent = card.title;
+    header.appendChild(title);
+
+    if (card.custom) {
+        const removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.className = 'side-card-remove-btn';
+        removeBtn.title = '移除卡片';
+        removeBtn.textContent = '✕';
+        removeBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            sidePanelState[panelId] = sidePanelState[panelId].filter(item => item.id !== card.id);
+            saveSidePanelConfig(panelId);
+            renderSidePanel(panelId);
+        });
+        header.appendChild(removeBtn);
+    }
+
+    article.appendChild(header);
+
+    const body = document.createElement('div');
+    body.className = 'side-card-body';
+    if (card.html) {
+        body.innerHTML = card.content;
+    } else {
+        body.innerHTML = escapeHTML(card.content).replace(/\n/g, '<br>');
+    }
+    article.appendChild(body);
+
+    return article;
+}
+
+function attachPanelDrag(panelId) {
+    const panelEl = document.querySelector(`.side-panel[data-panel-id="${panelId}"]`);
+    if (!panelEl) return;
+    const listEl = panelEl.querySelector('.side-card-list');
+    if (!listEl || listEl.dataset.dragSetup) return;
+
+    listEl.dataset.dragSetup = 'true';
+    let draggedCard = null;
+
+    listEl.addEventListener('dragstart', (e) => {
+        if (!isDesktopPanel()) {
+            e.preventDefault();
+            return;
+        }
+        const target = e.target.closest('.draggable-side-card');
+        if (!target) return;
+        draggedCard = target;
+        target.classList.add('dragging');
+        if (e.dataTransfer) {
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', target.dataset.cardId || '');
+        }
     });
 
-    const showUpdateBanner = (registration) => {
-        if (!swUpdateBanner || !registration?.waiting) return;
-        swUpdateBanner.classList.remove('hidden');
-        if (swUpdateButton) {
-            swUpdateButton.onclick = () => {
-                registration.waiting.postMessage({ type: 'SKIP_WAITING' });
-            };
-        }
-    };
+    listEl.addEventListener('dragover', (e) => {
+        if (!isDesktopPanel() || !draggedCard) return;
+        e.preventDefault();
+        const target = e.target.closest('.draggable-side-card');
+        if (!target || target === draggedCard) return;
+        const rect = target.getBoundingClientRect();
+        const shouldInsertAfter = (e.clientY - rect.top) > rect.height / 2;
+        listEl.insertBefore(draggedCard, shouldInsertAfter ? target.nextSibling : target);
+    });
 
-    window.addEventListener('load', async () => {
-        try {
-            const registration = await navigator.serviceWorker.register('/sw.js');
-            if (registration.waiting) {
-                showUpdateBanner(registration);
-            }
-            registration.addEventListener('updatefound', () => {
-                const newWorker = registration.installing;
-                if (!newWorker) return;
-                newWorker.addEventListener('statechange', () => {
-                    if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                        showUpdateBanner(registration);
-                    }
-                });
-            });
-        } catch (error) {
-            console.log('ServiceWorker 註冊失敗: ', error);
+    listEl.addEventListener('drop', (e) => {
+        if (!isDesktopPanel()) return;
+        e.preventDefault();
+        updatePanelOrder(panelId, listEl);
+    });
+
+    listEl.addEventListener('dragend', () => {
+        if (draggedCard) {
+            draggedCard.classList.remove('dragging');
+            draggedCard = null;
+            updatePanelOrder(panelId, listEl);
         }
     });
 }
+
+function updatePanelOrder(panelId, listEl) {
+    if (!listEl) return;
+    const order = Array.from(listEl.querySelectorAll('.draggable-side-card'))
+        .map(el => el.dataset.cardId);
+    const map = (sidePanelState[panelId] || []).reduce((acc, card) => {
+        acc[card.id] = card;
+        return acc;
+    }, {});
+
+    sidePanelState[panelId] = order.map(id => map[id]).filter(Boolean);
+    saveSidePanelConfig(panelId);
+}
+
+function setupSidePanelForm(panelEl) {
+    const panelId = panelEl.dataset.panelId;
+    const addBtn = panelEl.querySelector('.side-panel-add-btn');
+    const form = panelEl.querySelector('.side-panel-form');
+    const cancelBtn = form?.querySelector('.side-panel-form-cancel');
+
+    addBtn?.addEventListener('click', () => togglePanelForm(panelId, true));
+    cancelBtn?.addEventListener('click', () => togglePanelForm(panelId, false));
+
+    form?.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const titleInput = form.querySelector('input[name="title"]');
+        const contentInput = form.querySelector('textarea[name="content"]');
+        if (!titleInput || !contentInput) return;
+        const title = titleInput.value.trim();
+        const content = contentInput.value.trim();
+        if (!title || !content) return;
+
+        const newCard = {
+            id: `custom-${Date.now()}`,
+            title,
+            content,
+            custom: true
+        };
+        sidePanelState[panelId] = sidePanelState[panelId] || [];
+        sidePanelState[panelId].push(newCard);
+        saveSidePanelConfig(panelId);
+        renderSidePanel(panelId);
+        togglePanelForm(panelId, false);
+    });
+}
+
+function togglePanelForm(panelId, show) {
+    const panelEl = document.querySelector(`.side-panel[data-panel-id="${panelId}"]`);
+    const form = panelEl?.querySelector('.side-panel-form');
+    if (!form) return;
+    form.classList.toggle('hidden', !show);
+    if (show) {
+        form.querySelector('input[name="title"]')?.focus();
+    } else {
+        form.reset();
+    }
+}
+
+function updatePanelInteractions() {
+    const isDesktop = isDesktopPanel();
+    document.querySelectorAll('.side-panel').forEach(panelEl => {
+        const listEl = panelEl.querySelector('.side-card-list');
+        listEl?.querySelectorAll('.draggable-side-card').forEach(card => {
+            card.draggable = isDesktop;
+        });
+        const addBtn = panelEl.querySelector('.side-panel-add-btn');
+        addBtn?.classList.toggle('hidden', !isDesktop);
+        const form = panelEl.querySelector('.side-panel-form');
+        if (form && !isDesktop) {
+            form.classList.add('hidden');
+        }
+    });
+}
+
+function initSidePanels() {
+    Object.keys(SIDE_PANEL_DEFINITIONS).forEach(panelId => {
+        const panelEl = document.querySelector(`.side-panel[data-panel-id="${panelId}"]`);
+        if (!panelEl) return;
+        sidePanelState[panelId] = loadSidePanelConfig(panelId);
+        renderSidePanel(panelId);
+        setupSidePanelForm(panelEl);
+        attachPanelDrag(panelId);
+    });
+    updatePanelInteractions();
+}
+
+window.addEventListener('resize', () => {
+    clearTimeout(panelResizeTimer);
+    panelResizeTimer = setTimeout(() => {
+        updatePanelInteractions();
+        updateDesktopBoardVisibility();
+    }, 120);
+});
+
+initSidePanels();
+updateDesktopBoardVisibility();
+initializeBoard();
+
+// Service Worker update logic moved to js/sw-update.js for better separation.

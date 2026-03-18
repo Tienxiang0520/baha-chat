@@ -34,14 +34,67 @@
             </button>
         </header>
         
-        <div id="room-form-container">
-            <input id="room-input" autocomplete="off" placeholder="建立新房間..." data-i18n-placeholder="new_topic_placeholder" required />
-            <button id="create-room-btn" data-i18n="create">建立</button>
+        <div id="lobby-grid">
+            <div class="lobby-main">
+                <div id="room-form-container">
+                    <input id="room-input" autocomplete="off" placeholder="建立新房間..." data-i18n-placeholder="new_topic_placeholder" required />
+                    <button id="create-room-btn" data-i18n="create">建立</button>
+                </div>
+                <div id="search-container">
+                    <input id="search-input" autocomplete="off" placeholder="🔍 搜尋話題..." data-i18n-placeholder="search_placeholder" />
+                </div>
+                <ul id="room-list"></ul>
+            </div>
+            <aside class="lobby-side side-panel" data-panel-id="lobby">
+                <div class="side-panel-header">
+                    <div>
+                        <h2>桌機專區</h2>
+                        <p>拖曳視窗可以讓左側房間與右側彈性工具同時呈現，維持清爽的 16:9 觀看體驗。</p>
+                    </div>
+                    <button class="side-panel-add-btn" type="button">+ 新增卡片</button>
+                </div>
+                <div class="side-card-list"></div>
+                <form class="side-panel-form hidden" data-panel-id="lobby">
+                    <input name="title" placeholder="卡片標題" required />
+                    <textarea name="content" rows="3" placeholder="卡片內容 / 支援文字與換行" required></textarea>
+                    <div class="side-panel-form-actions">
+                        <button type="submit">新增</button>
+                        <button type="button" class="side-panel-form-cancel">取消</button>
+                    </div>
+                </form>
+            </aside>
         </div>
-        <div id="search-container">
-            <input id="search-input" autocomplete="off" placeholder="🔍 搜尋話題..." data-i18n-placeholder="search_placeholder" />
+        <div id="desktop-board" class="desktop-board hidden" aria-label="桌機白板">
+            <header class="desktop-board-header">
+                <div>
+                    <h2>桌機白板</h2>
+                    <p>像微軟白板一樣拖移組件、擺放自訂內容，建立你自己的版面。</p>
+                </div>
+                <div class="desktop-board-actions">
+                    <button id="board-open-palette-btn" type="button">新增組件</button>
+                    <button id="board-reset-btn" type="button">重置佈局</button>
+                    <button id="board-features-btn" type="button" class="board-features-btn" data-i18n="features">功能</button>
+                </div>
+            </header>
+            <div id="board-palette" class="board-palette hidden">
+                <p>選擇要新增的組件</p>
+                <div class="board-palette-buttons">
+                    <button type="button" data-board-module="create-room">建立房間</button>
+                    <button type="button" data-board-module="search">搜尋話題</button>
+                    <button type="button" data-board-module="rooms">房間列表</button>
+                    <button type="button" data-board-module="actions">功能捷徑</button>
+                    <button type="button" data-board-module="sponsor">贊助資訊</button>
+                </div>
+                <form id="board-custom-component-form">
+                    <input name="title" placeholder="卡片標題" required />
+                    <textarea name="content" rows="3" placeholder="卡片內容 / 支援文字與換行" required></textarea>
+                    <button type="submit">建立自訂卡片</button>
+                </form>
+            </div>
+            <div class="board-surface">
+                <div id="board-canvas" class="board-canvas"></div>
+            </div>
         </div>
-        <ul id="room-list"></ul>
     </div>
 
     <!-- 功能選單畫面 -->
@@ -163,20 +216,41 @@
                 <button id="back-btn" class="header-btn" data-i18n="back_to_lobby">⬅ 返回大廳</button>
                 <h1 id="room-title" data-i18n="room_title_default">話題標題</h1>
             </header>
-            <div id="thread-banner" class="thread-banner hidden">
-                <span data-i18n="thread_parent_label">此為子討論串，原房：</span>
-                <span id="thread-parent-name"></span>
-                <button id="thread-back-btn" type="button" data-i18n="thread_back">返回主頻道</button>
+            <div class="chat-grid">
+                <div class="chat-main">
+                    <div id="thread-banner" class="thread-banner hidden">
+                        <span data-i18n="thread_parent_label">此為子討論串，原房：</span>
+                        <span id="thread-parent-name"></span>
+                        <button id="thread-back-btn" type="button" data-i18n="thread_back">返回主頻道</button>
+                    </div>
+                    <div id="admin-key-banner" class="admin-key-banner hidden" role="status" aria-live="polite">
+                        <span id="admin-key-label">管理金鑰：</span>
+                        <span id="admin-key-text"></span>
+                        <button id="admin-key-copy" type="button" class="admin-key-copy">複製</button>
+                        <button id="admin-key-close" type="button" class="admin-key-close" aria-label="關閉">✖</button>
+                    </div>
+                    <div id="danmaku-container"></div>
+                    <ul id="messages"></ul>
+                </div>
+                <aside class="chat-side side-panel" data-panel-id="chat">
+                    <div class="side-panel-header">
+                        <div>
+                            <h2>聊天室小幫手</h2>
+                            <p>為桌機使用者整理熱點指令、公告與快捷入口。</p>
+                        </div>
+                        <button class="side-panel-add-btn" type="button">+ 新增卡片</button>
+                    </div>
+                    <div class="side-card-list"></div>
+                    <form class="side-panel-form hidden" data-panel-id="chat">
+                        <input name="title" placeholder="卡片標題" required />
+                        <textarea name="content" rows="3" placeholder="卡片內容 / 支援文字與換行" required></textarea>
+                        <div class="side-panel-form-actions">
+                            <button type="submit">新增</button>
+                            <button type="button" class="side-panel-form-cancel">取消</button>
+                        </div>
+                    </form>
+                </aside>
             </div>
-            <div id="admin-key-banner" class="admin-key-banner hidden" role="status" aria-live="polite">
-                <span id="admin-key-label">管理金鑰：</span>
-                <span id="admin-key-text"></span>
-                <button id="admin-key-copy" type="button" class="admin-key-copy">複製</button>
-                <button id="admin-key-close" type="button" class="admin-key-close" aria-label="關閉">✖</button>
-            </div>
-            
-            <div id="danmaku-container"></div>
-            <ul id="messages"></ul>
         
         <!-- 準備回覆的預覽區塊 (預設隱藏) -->
         <div id="reply-preview" class="hidden">
@@ -224,7 +298,11 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/markdown-it-highlightjs/dist/markdown-it-highlightjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dompurify@2.4.0/dist/purify.min.js"></script>
+    <script src="js/clipboard.js"></script>
+    <script src="js/admin-key-banner.js"></script>
+    <script src="js/thread-ui.js"></script>
     <script src="script.js"></script>
+    <script src="js/sw-update.js"></script>
     
 </body>
 </html>
