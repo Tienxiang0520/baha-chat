@@ -4,7 +4,7 @@ const roomSchema = new mongoose.Schema({
     name: { type: String, unique: true },
     createdAt: { type: Number, default: Date.now },
     isLocked: { type: Boolean, default: false },
-    password: { type: String, default: null }
+    password: { type: String, default: null },
     creatorId: { type: String, default: null },
     adminTokenHash: { type: String, default: null }
 });
