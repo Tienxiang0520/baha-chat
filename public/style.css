@@ -298,7 +298,7 @@ body {
 }
 
 .desktop-board-header {
-    pointer-events: none;
+    pointer-events: auto;
 }
 
 .desktop-board-header h2 {
@@ -409,6 +409,8 @@ body {
     overflow: auto;
     position: relative;
     cursor: grab;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x pan-y;
 }
 
 .board-canvas {
@@ -560,6 +562,10 @@ body {
     cursor: grab;
     min-width: 220px;
     overflow: hidden;
+}
+
+.board-module--mobile {
+    cursor: default;
 }
 
 .board-module--resizing {
@@ -747,6 +753,127 @@ body {
 
 .board-room-list li:hover {
     background: rgba(99, 102, 241, 0.1);
+}
+
+.board-mobile-hint {
+    display: none;
+}
+
+@media (max-width: 1199px) {
+    .desktop-board-header {
+        position: sticky;
+        top: 0;
+        z-index: 30;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        padding: 14px 14px 10px;
+        background: linear-gradient(180deg, rgba(233, 238, 255, 0.98), rgba(233, 238, 255, 0.92));
+        backdrop-filter: blur(10px);
+        border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+    }
+
+    .desktop-board-header p {
+        font-size: 0.82rem;
+        line-height: 1.4;
+        max-width: 22rem;
+    }
+
+    .desktop-board-actions {
+        position: static;
+        width: 100%;
+        padding: 10px;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        border-style: solid;
+    }
+
+    .desktop-board-actions button {
+        flex: 1 1 calc(33.333% - 8px);
+        min-width: 94px;
+        padding: 8px 10px;
+        font-size: 0.92rem;
+    }
+
+    .board-features-btn {
+        flex-basis: 100%;
+    }
+
+    .board-palette {
+        width: calc(100vw - 24px);
+        max-width: none;
+        margin: 12px;
+        padding: 14px;
+    }
+
+    .board-palette-buttons button {
+        min-width: 110px;
+    }
+
+    .board-canvas {
+        min-width: max(100%, 360px);
+        min-height: 1600px;
+        background-size: 56px 56px;
+    }
+
+    .board-module {
+        box-shadow: 0 8px 18px rgba(15, 23, 42, 0.12);
+    }
+
+    .board-module-handle {
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .board-module-mobile-actions {
+        display: inline-flex;
+        gap: 6px;
+        margin-left: auto;
+    }
+
+    .board-module-move {
+        border: 1px solid rgba(99, 102, 241, 0.35);
+        background: rgba(99, 102, 241, 0.08);
+        color: var(--accent-strong);
+        width: 32px;
+        height: 32px;
+        border-radius: 10px;
+        cursor: pointer;
+        font-weight: 800;
+        line-height: 1;
+    }
+
+    .board-module-move:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+    }
+
+    .board-module-edit,
+    .board-module-resizer {
+        display: none;
+    }
+
+    .board-module-handle {
+        cursor: default;
+    }
+
+    .board-module.board-module--actions {
+        width: min(420px, calc(100vw - 48px));
+    }
+
+    .board-module-actions {
+        max-height: none;
+        overflow: visible;
+        padding-right: 0;
+    }
+
+    .board-mobile-hint {
+        display: block;
+        margin: 0 14px 12px;
+        font-size: 0.82rem;
+        color: var(--text-muted);
+    }
 }
 
 .board-palette.hidden {

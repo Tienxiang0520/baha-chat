@@ -23,8 +23,8 @@ function registerChatHandlers(socket, io, fetchLinkPreview, handleCommand) {
             return;
         }
 
-        const preview = await fetchLinkPreview(text);
-        const messageData = { id: socket.userId, text, timestamp: Date.now(), useMarkdown, replyTo, effect, linkPreview: preview };
+        const timestamp = Date.now();
+        const messageData = { id: socket.userId, text, timestamp, useMarkdown, replyTo, effect, linkPreview: null };
 
         const existingRoom = await Room.findOne({ name: room });
         if (existingRoom) {
@@ -32,6 +32,26 @@ function registerChatHandlers(socket, io, fetchLinkPreview, handleCommand) {
                 const messageRecord = await Message.create({ roomName: room, ...messageData });
                 const outgoing = { ...messageData, mid: messageRecord._id.toString() };
                 io.to(room).emit('chat message', outgoing);
+
+                if (typeof fetchLinkPreview === 'function' && text) {
+                    setImmediate(async () => {
+                        try {
+                            const preview = await fetchLinkPreview(text);
+                            if (!preview) return;
+                            await Message.updateOne(
+                                { _id: messageRecord._id },
+                                { $set: { linkPreview: preview } }
+                            );
+                            io.to(room).emit('chat message updated', {
+                                room,
+                                mid: messageRecord._id.toString(),
+                                linkPreview: preview
+                            });
+                        } catch (previewError) {
+                            console.error('背景連結預覽更新失敗:', previewError);
+                        }
+                    });
+                }
             } catch (err) {
                 console.error('儲存訊息發生錯誤:', err);
                 socket.emit('chat message', { id: 'System', text: '❌ 系統錯誤，訊息傳送失敗。', timestamp: Date.now() });

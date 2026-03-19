@@ -39,6 +39,7 @@ const searchInput = document.getElementById('search-input');
 let boardSearchInputElement = null;
 let isSearchSyncing = false;
 let boardRoomListElement = null;
+let roomListRenderScheduled = false;
 const backBtn = document.getElementById('back-btn');
 const featuresBtn = document.getElementById('features-btn');
 const backFromFeaturesBtn = document.getElementById('back-from-features-btn');
@@ -78,6 +79,7 @@ let isTyping = false;
 const typingUsers = new Map();
 const typingThrottles = new Map();
 const pendingAdminTokens = new Map();
+let messageScrollScheduled = false;
 
 const commandSuggestions = document.getElementById('command-suggestions');
 
@@ -129,18 +131,37 @@ let selectedMessageMid = null;
 let activeThreadParent = null;
 let activeThreadTitle = '';
 
+function showFeaturesView() {
+    lobbyView.classList.add('hidden');
+    chatView.classList.add('hidden');
+    if (desktopBoard) {
+        desktopBoard.classList.add('hidden');
+    }
+    featuresView.classList.remove('hidden');
+    featuresDot.classList.add('hidden');
+}
+
+function restoreMainWorkspace() {
+    featuresView.classList.add('hidden');
+    if (currentRoom) {
+        chatView.classList.remove('hidden');
+        return;
+    }
+    if (isDesktopBoardActive() && desktopBoard) {
+        desktopBoard.classList.remove('hidden');
+    } else {
+        lobbyView.classList.remove('hidden');
+    }
+}
+
 // ===== 畫面切換邏輯 =====
 featuresBtn.addEventListener('click', () => {
-    lobbyView.classList.add('hidden');
-    featuresView.classList.remove('hidden');
-    featuresDot.classList.add('hidden'); // 點開功能選單時消除右上角紅點
+    showFeaturesView();
 });
 
 if (boardFeaturesBtn) {
     boardFeaturesBtn.addEventListener('click', () => {
-        lobbyView.classList.add('hidden');
-        featuresView.classList.remove('hidden');
-        featuresDot.classList.add('hidden');
+        showFeaturesView();
     });
 }
 
@@ -163,7 +184,7 @@ if (desktopNotificationsBtn) {
 }
 
 backFromFeaturesBtn.addEventListener('click', () => {
-    featuresView.classList.add('hidden');
+    restoreMainWorkspace();
 });
 
 tutorialBtn.addEventListener('click', () => {
@@ -541,6 +562,15 @@ function clearTypingState() {
     updateTypingIndicator();
 }
 
+function scheduleMessageScroll() {
+    if (!messages || messageScrollScheduled) return;
+    messageScrollScheduled = true;
+    requestAnimationFrame(() => {
+        messages.scrollTo(0, messages.scrollHeight);
+        messageScrollScheduled = false;
+    });
+}
+
 /**
  * 增加系統提示訊息到畫面上
  */
@@ -549,7 +579,41 @@ function addSystemMessage(text) {
     item.className = 'system-message';
     item.textContent = text;
     messages.appendChild(item);
-    messages.scrollTo(0, messages.scrollHeight);
+    scheduleMessageScroll();
+}
+
+function appendLinkPreview(item, linkPreview) {
+    if (!item || !linkPreview || !linkPreview.title) return;
+    const existingPreview = item.querySelector('.link-preview-card');
+    if (existingPreview) existingPreview.remove();
+
+    const previewCard = document.createElement('a');
+    previewCard.className = 'link-preview-card';
+    previewCard.href = linkPreview.url;
+    previewCard.target = '_blank';
+    previewCard.rel = 'noopener noreferrer';
+
+    const previewContent = document.createElement('div');
+    previewContent.className = 'link-preview-content';
+    previewContent.innerHTML = `
+        <div class="link-preview-title">${escapeHTML(linkPreview.title)}</div>
+        ${linkPreview.description ? `<div class="link-preview-desc">${escapeHTML(linkPreview.description)}</div>` : ''}
+    `;
+    previewCard.appendChild(previewContent);
+
+    if (linkPreview.image) {
+        const previewImg = document.createElement('img');
+        previewImg.className = 'link-preview-image';
+        previewImg.src = linkPreview.image;
+        previewCard.appendChild(previewImg);
+    }
+
+    const timeElement = item.querySelector('.message-time');
+    if (timeElement) {
+        item.insertBefore(previewCard, timeElement);
+    } else {
+        item.appendChild(previewCard);
+    }
 }
 
 /**
@@ -655,9 +719,22 @@ const BOARD_MODULE_TITLES = {
 };
 
 let boardModules = [];
+let boardSaveTimer = null;
+let boardMobileCursorY = 16;
 
 function refreshBoardCanvasSize() {
     if (!boardCanvas) return;
+    if (!isDesktopBoardActive()) {
+        let requiredWidth = Math.max(window.innerWidth - 24, 360);
+        let requiredHeight = 16;
+        boardModules.forEach(module => {
+            const moduleHeight = module.mobileHeight || module.height || 180;
+            requiredHeight += moduleHeight + 16;
+        });
+        boardCanvas.style.width = `${requiredWidth}px`;
+        boardCanvas.style.height = `${requiredHeight + 16}px`;
+        return;
+    }
     let requiredWidth = BOARD_MIN_CANVAS_WIDTH;
     let requiredHeight = BOARD_MIN_CANVAS_HEIGHT;
     boardModules.forEach(module => {
@@ -760,7 +837,21 @@ function loadBoardModules() {
 
 function saveBoardModules() {
     if (!boardCanvas) return;
-    localStorage.setItem(BOARD_STORAGE_KEY, JSON.stringify(boardModules));
+    const persistedModules = boardModules.map(module => {
+        const { mobileHeight, mobileWidth, ...persistent } = module;
+        return persistent;
+    });
+    localStorage.setItem(BOARD_STORAGE_KEY, JSON.stringify(persistedModules));
+}
+
+function scheduleBoardSave() {
+    if (boardSaveTimer) {
+        clearTimeout(boardSaveTimer);
+    }
+    boardSaveTimer = setTimeout(() => {
+        boardSaveTimer = null;
+        saveBoardModules();
+    }, 120);
 }
 
 function resetBoardModules() {
@@ -768,7 +859,18 @@ function resetBoardModules() {
         ...module,
         data: module.data ? { ...module.data } : {}
     }));
-    saveBoardModules();
+    scheduleBoardSave();
+    renderBoardModules();
+}
+
+function moveBoardModule(moduleId, delta) {
+    const currentIndex = boardModules.findIndex(module => module.id === moduleId);
+    if (currentIndex < 0) return;
+    const nextIndex = currentIndex + delta;
+    if (nextIndex < 0 || nextIndex >= boardModules.length) return;
+    const [module] = boardModules.splice(currentIndex, 1);
+    boardModules.splice(nextIndex, 0, module);
+    scheduleBoardSave();
     renderBoardModules();
 }
 
@@ -781,11 +883,59 @@ function createBoardModuleElement(module) {
     if (module.width) wrapper.style.width = `${module.width}px`;
     if (module.height) wrapper.style.height = `${module.height}px`;
 
+    if (!isDesktopBoardActive()) {
+        const mobileWidth = Math.max(Math.min(window.innerWidth - 32, 420), 280);
+        const mobileHeight = module.type === 'actions'
+            ? Math.max(module.height || 180, 460)
+            : (module.height || 180);
+        module.mobileWidth = mobileWidth;
+        module.mobileHeight = mobileHeight;
+        wrapper.classList.add('board-module--mobile');
+        wrapper.style.left = '16px';
+        wrapper.style.top = `${boardMobileCursorY}px`;
+        wrapper.style.width = `${mobileWidth}px`;
+        wrapper.style.height = `${mobileHeight}px`;
+        boardMobileCursorY += mobileHeight + 16;
+    }
+
     const handle = document.createElement('header');
     handle.className = 'board-module-handle';
     const title = document.createElement('span');
     title.textContent = module.data?.title || BOARD_MODULE_TITLES[module.type] || '白板模組';
     handle.appendChild(title);
+
+    if (!isDesktopBoardActive()) {
+        const mobileActions = document.createElement('div');
+        mobileActions.className = 'board-module-mobile-actions';
+
+        const moveUpBtn = document.createElement('button');
+        moveUpBtn.type = 'button';
+        moveUpBtn.className = 'board-module-move board-module-move-up';
+        moveUpBtn.textContent = '↑';
+        moveUpBtn.title = '往上移';
+        moveUpBtn.setAttribute('aria-label', '往上移');
+        moveUpBtn.disabled = boardModules[0]?.id === module.id;
+        moveUpBtn.addEventListener('click', (event) => {
+            event.stopPropagation();
+            moveBoardModule(module.id, -1);
+        });
+
+        const moveDownBtn = document.createElement('button');
+        moveDownBtn.type = 'button';
+        moveDownBtn.className = 'board-module-move board-module-move-down';
+        moveDownBtn.textContent = '↓';
+        moveDownBtn.title = '往下移';
+        moveDownBtn.setAttribute('aria-label', '往下移');
+        moveDownBtn.disabled = boardModules[boardModules.length - 1]?.id === module.id;
+        moveDownBtn.addEventListener('click', (event) => {
+            event.stopPropagation();
+            moveBoardModule(module.id, 1);
+        });
+
+        mobileActions.appendChild(moveUpBtn);
+        mobileActions.appendChild(moveDownBtn);
+        handle.appendChild(mobileActions);
+    }
 
     if (module.removable) {
         if (module.type === 'custom') {
@@ -858,7 +1008,7 @@ function createBoardModuleElement(module) {
                    e.preventDefault();
                    module.data.title = titleInput.value.trim();
                    module.data.content = contentInput.value.trim();
-                   saveBoardModules();
+                   scheduleBoardSave();
                    renderBoardModules();
                 });
             });
@@ -875,7 +1025,7 @@ function createBoardModuleElement(module) {
             event.stopPropagation();
             boardModules = boardModules.filter(item => item.id !== module.id);
             setTimeout(() => {
-                saveBoardModules();
+                scheduleBoardSave();
                 renderBoardModules();
             }, 0);
         });
@@ -993,7 +1143,7 @@ function createBoardModuleElement(module) {
 }
 
 function attachBoardDrag(handle, moduleEl, module) {
-    if (!handle || !moduleEl) return;
+    if (!handle || !moduleEl || !isDesktopBoardActive()) return;
     let dragging = false;
     let startX = 0;
     let startY = 0;
@@ -1021,7 +1171,7 @@ function attachBoardDrag(handle, moduleEl, module) {
         document.body.style.userSelect = '';
         window.removeEventListener('pointermove', onPointerMove);
         window.removeEventListener('pointerup', onPointerUp);
-        saveBoardModules();
+        scheduleBoardSave();
     };
 
     handle.addEventListener('pointerdown', (event) => {
@@ -1039,7 +1189,7 @@ function attachBoardDrag(handle, moduleEl, module) {
 }
 
 function attachModuleResize(resizer, moduleEl, module) {
-    if (!resizer || !moduleEl) return;
+    if (!resizer || !moduleEl || !isDesktopBoardActive()) return;
     let resizing = false;
     let startX = 0;
     let startY = 0;
@@ -1082,7 +1232,7 @@ function attachModuleResize(resizer, moduleEl, module) {
         cancel();
         window.removeEventListener('pointermove', onMove);
         window.removeEventListener('pointerup', onUp);
-        saveBoardModules();
+        scheduleBoardSave();
     };
 }
 
@@ -1091,12 +1241,13 @@ function renderBoardModules() {
     boardCanvas.innerHTML = '';
     boardRoomListElement = null;
     boardSearchInputElement = null;
+    boardMobileCursorY = 16;
     boardModules.forEach(module => {
         const moduleEl = createBoardModuleElement(module);
         boardCanvas.appendChild(moduleEl);
     });
     refreshBoardCanvasSize();
-    renderRoomList();
+    scheduleRoomListRender();
 }
 
 function createModuleFromType(type) {
@@ -1128,7 +1279,7 @@ function handlePaletteSelection(event) {
     const type = button?.dataset?.boardModule;
     if (!type) return;
     boardModules.push(createModuleFromType(type));
-    saveBoardModules();
+    scheduleBoardSave();
     renderBoardModules();
     toggleBoardPalette(false);
 }
@@ -1151,7 +1302,7 @@ function handleCustomModuleSubmit(event) {
         data: { title, content },
         removable: true
     });
-    saveBoardModules();
+    scheduleBoardSave();
     renderBoardModules();
     event.target.reset();
     toggleBoardPalette(false);
@@ -1305,7 +1456,7 @@ window.unlockMessage = function(btnElement, correctPassword, encodedContent) {
  * @param {object} data - 包含 id, text 和 timestamp 的訊息物件
  * @param {boolean} skipScroll - 是否跳過捲動 (彈幕模式時使用)
  */
-function addMessage(data, skipScroll = false) {
+function buildMessageElement(data) {
     const item = document.createElement('li');
     const messageId = data.mid || data._id || '';
     if (messageId) {
@@ -1366,30 +1517,7 @@ function addMessage(data, skipScroll = false) {
         item.appendChild(threadBtn);
     }
 
-    // 5. 如果有網址摘要，渲染視覺化卡片
-    if (data.linkPreview && data.linkPreview.title) {
-        const previewCard = document.createElement('a');
-        previewCard.className = 'link-preview-card';
-        previewCard.href = data.linkPreview.url;
-        previewCard.target = '_blank';
-        previewCard.rel = 'noopener noreferrer';
-
-        const previewContent = document.createElement('div');
-        previewContent.className = 'link-preview-content';
-        previewContent.innerHTML = `
-            <div class="link-preview-title">${escapeHTML(data.linkPreview.title)}</div>
-            ${data.linkPreview.description ? `<div class="link-preview-desc">${escapeHTML(data.linkPreview.description)}</div>` : ''}
-        `;
-        previewCard.appendChild(previewContent);
-
-        if (data.linkPreview.image) {
-            const previewImg = document.createElement('img');
-            previewImg.className = 'link-preview-image';
-            previewImg.src = data.linkPreview.image;
-            previewCard.appendChild(previewImg);
-        }
-        item.appendChild(previewCard);
-    }
+    appendLinkPreview(item, data.linkPreview);
 
     if (data.poll) {
         const pollCard = document.createElement('div');
@@ -1469,11 +1597,25 @@ function addMessage(data, skipScroll = false) {
     item.addEventListener('touchend', () => clearTimeout(pressTimer));
     item.addEventListener('touchmove', () => clearTimeout(pressTimer));
 
+    return item;
+}
+
+function addMessage(data, skipScroll = false) {
+    const item = buildMessageElement(data);
     messages.appendChild(item);
-    
     if (!skipScroll) {
-        messages.scrollTo(0, messages.scrollHeight);
+        scheduleMessageScroll();
     }
+}
+
+function addMessageBatch(history) {
+    if (!Array.isArray(history) || history.length === 0) return;
+    const fragment = document.createDocumentFragment();
+    history.forEach(data => {
+        fragment.appendChild(buildMessageElement(data));
+    });
+    messages.appendChild(fragment);
+    scheduleMessageScroll();
 }
 
 /**
@@ -1665,6 +1807,15 @@ function renderRoomList() {
     });
 }
 
+function scheduleRoomListRender() {
+    if (roomListRenderScheduled) return;
+    roomListRenderScheduled = true;
+    requestAnimationFrame(() => {
+        renderRoomList();
+        roomListRenderScheduled = false;
+    });
+}
+
 // ===== 系統公告渲染與事件 =====
 function createAnnouncementElement(data) {
     const item = document.createElement('div');
@@ -1716,7 +1867,7 @@ socket.on('join success', (roomInfo) => {
     if (roomName && pendingAdminTokens.has(roomName)) {
         displayAdminToken(roomName, pendingAdminTokens.get(roomName));
     }
-    renderRoomList();
+    scheduleRoomListRender();
 });
 
 // 監聽加入房間失敗 (密碼錯誤)
@@ -1737,14 +1888,14 @@ function handleSearchTermChange(value, origin) {
     if (origin !== 'board' && boardSearchInputElement) {
         boardSearchInputElement.value = normalized;
     }
-    renderRoomList();
+    scheduleRoomListRender();
     isSearchSyncing = false;
 }
 
 // 監聽伺服器廣播的房間列表並更新大廳
 socket.on('room list', (rooms) => {
     allRooms = rooms; // 更新全域的房間列表
-    renderRoomList(); // 根據列表與現有搜尋條件重新渲染
+    scheduleRoomListRender(); // 根據列表與現有搜尋條件重新渲染
     window.ThreadUI?.update(activeThreadParent, getRoomDisplayName(activeThreadParent), activeThreadTitle);
 });
 
@@ -1884,10 +2035,7 @@ input.addEventListener('blur', () => sendTypingStatus(false));
 // 監聽來自伺服器的歷史訊息事件 (剛加入房間時觸發)
 socket.on('chat history', function(history) {
     messages.innerHTML = ''; // 確保載入前清空畫面
-    // 載入所有歷史訊息
-    history.forEach(data => {
-        addMessage(data);
-    });
+    addMessageBatch(history);
 });
 
 // 監聽來自伺服器的訊息
@@ -1916,6 +2064,14 @@ messageTimestamps.push(now);
         addMessage(data, false);
         maybeShowDesktopNotification(data);
     }
+});
+
+socket.on('chat message updated', (data) => {
+    if (!data || data.room !== currentRoom || !data.mid || !data.linkPreview) return;
+    const escapedId = (typeof CSS !== 'undefined' && CSS.escape) ? CSS.escape(data.mid) : data.mid;
+    const target = messages.querySelector(`[data-mid="${escapedId}"]`);
+    if (!target) return;
+    appendLinkPreview(target, data.linkPreview);
 });
 
 // 監聽 Socket.io 連線成功事件 (隱藏載入畫面)

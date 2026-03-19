@@ -124,7 +124,8 @@ io.on('connection', async (socket) => {
     socket.mutedRooms = new Map();
     socket.loginAttempts = 0; // 初始化登入嘗試次數
     socket.lockoutUntil = null; // 初始化鎖定時間
-    log(`📡 [連線] 匿名使用者 ${userId} (ID: ${socket.id}) 已進入，當前總人數: ${totalUsers}`);
+    const currentTotalUsers = io.engine.clientsCount;
+    log(`📡 [連線] 匿名使用者 ${userId} (ID: ${socket.id}) 已進入，當前總人數: ${currentTotalUsers}`);
 
     // 當新使用者連線時，傳送目前所有可用房間列表
     socket.emit('room list', await getSortedRoomList(io));
