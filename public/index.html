@@ -24,7 +24,7 @@
     </div>
 
     <!-- 大廳畫面：用來顯示話題列表與建立話題 -->
-    <div id="lobby-view" class="chat-container">
+    <div id="lobby-view" class="chat-container hidden">
         <header class="lobby-header">
             <div style="width: 60px; visibility: hidden;"></div> <!-- 佔位平衡 -->
             <h1 data-i18n="lobby_title">Baha 話題大廳</h1>
@@ -56,7 +56,7 @@
                 <div class="side-card-list"></div>
                 <form class="side-panel-form hidden" data-panel-id="lobby">
                     <input name="title" placeholder="卡片標題" required />
-                    <textarea name="content" rows="3" placeholder="卡片內容 / 支援文字與換行" required></textarea>
+                    <textarea name="content" rows="3" placeholder="卡片內容 / 支援 Markdown 語法" required></textarea>
                     <div class="side-panel-form-actions">
                         <button type="submit">新增</button>
                         <button type="button" class="side-panel-form-cancel">取消</button>
@@ -64,36 +64,38 @@
                 </form>
             </aside>
         </div>
-        <div id="desktop-board" class="desktop-board hidden" aria-label="桌機白板">
-            <header class="desktop-board-header">
-                <div>
-                    <h2>桌機白板</h2>
-                    <p>像微軟白板一樣拖移組件、擺放自訂內容，建立你自己的版面。</p>
-                </div>
-                <div class="desktop-board-actions">
-                    <button id="board-open-palette-btn" type="button">新增組件</button>
-                    <button id="board-reset-btn" type="button">重置佈局</button>
-                    <button id="board-features-btn" type="button" class="board-features-btn" data-i18n="features">功能</button>
-                </div>
-            </header>
-            <div id="board-palette" class="board-palette hidden">
-                <p>選擇要新增的組件</p>
-                <div class="board-palette-buttons">
-                    <button type="button" data-board-module="create-room">建立房間</button>
-                    <button type="button" data-board-module="search">搜尋話題</button>
-                    <button type="button" data-board-module="rooms">房間列表</button>
-                    <button type="button" data-board-module="actions">功能捷徑</button>
-                    <button type="button" data-board-module="sponsor">贊助資訊</button>
-                </div>
-                <form id="board-custom-component-form">
-                    <input name="title" placeholder="卡片標題" required />
-                    <textarea name="content" rows="3" placeholder="卡片內容 / 支援文字與換行" required></textarea>
-                    <button type="submit">建立自訂卡片</button>
-                </form>
+    </div>
+
+    <!-- 大白板（全螢幕主畫面，作為 body 直接子元素以避免 display:none 繼承問題） -->
+    <div id="desktop-board" class="desktop-board" aria-label="大白板">
+        <header class="desktop-board-header">
+            <div>
+                <h2>桌機白板</h2>
+                <p>像微軟白板一樣拖移組件、擺放自訂內容，建立你自己的版面。</p>
             </div>
-            <div class="board-surface">
-                <div id="board-canvas" class="board-canvas"></div>
+            <div class="desktop-board-actions">
+                <button id="board-open-palette-btn" type="button">新增組件</button>
+                <button id="board-reset-btn" type="button">重置佈局</button>
+                <button id="board-features-btn" type="button" class="board-features-btn" data-i18n="features">功能</button>
             </div>
+        </header>
+        <div id="board-palette" class="board-palette hidden">
+            <p>選擇要新增的組件</p>
+            <div class="board-palette-buttons">
+                <button type="button" data-board-module="create-room">建立房間</button>
+                <button type="button" data-board-module="search">搜尋話題</button>
+                <button type="button" data-board-module="rooms">房間列表</button>
+                <button type="button" data-board-module="actions">功能捷徑</button>
+                <button type="button" data-board-module="sponsor">贊助資訊</button>
+            </div>
+            <form id="board-custom-component-form">
+                <input name="title" placeholder="卡片標題" required />
+                <textarea name="content" rows="3" placeholder="卡片內容 / 支援 Markdown 語法" required></textarea>
+                <button type="submit">建立自訂卡片</button>
+            </form>
+        </div>
+        <div class="board-surface">
+            <div id="board-canvas" class="board-canvas"></div>
         </div>
     </div>
 
@@ -106,6 +108,7 @@
         </header>
         <div class="features-content">
             <button id="tutorial-btn" class="feature-menu-btn" data-i18n="command_tutorial">📖 指令教學</button>
+            <button id="embed-tutorial-btn" class="feature-menu-btn">🔗 網址嵌入教學</button>
             <button id="announcement-btn" class="feature-menu-btn">
                 📢 <span data-i18n="announcements_title">系統公告</span>
                 <span id="announcement-dot" class="notification-dot hidden"></span>
@@ -113,6 +116,8 @@
             <button id="sponsor-btn" class="feature-menu-btn">
                 💖 <span data-i18n="sponsor_button">贊助 Baha</span>
             </button>
+            <button id="reduce-motion-btn" class="feature-menu-btn feature-menu-btn--secondary">減少動態效果</button>
+            <button id="desktop-notifications-btn" class="feature-menu-btn feature-menu-btn--secondary">桌面通知</button>
             <!-- 未來可以在這裡加入設定、個人首頁等按鈕 -->
         </div>
     </div>
@@ -175,6 +180,44 @@
         </div>
     </div>
 
+    <!-- 網址嵌入教學畫面 -->
+    <div id="embed-tutorial-view" class="chat-container hidden">
+        <header class="chat-header">
+            <button id="back-from-embed-tutorial-btn" class="header-btn" data-i18n="back">⬅ 返回</button>
+            <h1>🔗 網址嵌入教學</h1>
+            <div style="width: 60px; visibility: hidden;"></div> <!-- 佔位平衡 -->
+        </header>
+        <div class="tutorial-content" style="overflow-y: auto; padding: 20px;">
+            <h3 style="margin-top: 0;">🌐 如何嵌入各種網頁工具</h3>
+            <p style="margin-bottom: 10px; line-height: 1.5;">你可以直接將其他網站提供的 <code>&lt;iframe&gt;</code> 嵌入碼貼在卡片內容中！系統已經為你過濾掉惡意腳本，請放心使用。</p>
+            <table class="tutorial-table">
+                <tr><th>服務</th><th>操作方式</th></tr>
+                <tr>
+                    <td><strong>YouTube</strong></td>
+                    <td>點擊影片底下的「分享」➔「嵌入」，複製 <code>&lt;iframe src="..."&gt;&lt;/iframe&gt;</code> 貼上。</td>
+                </tr>
+                <tr>
+                    <td><strong>Spotify</strong></td>
+                    <td>點擊單曲或歌單旁邊的「...」➔「分享」➔「內嵌」，複製程式碼貼上。</td>
+                </tr>
+                <tr>
+                    <td><strong>Google 地圖</strong></td>
+                    <td>搜尋地標，點擊側邊欄的「分享」➔「嵌入地圖」，複製 HTML 貼上。</td>
+                </tr>
+                <tr>
+                    <td><strong>各式工具 / 網站</strong></td>
+                    <td>只要該網站開放嵌入，可以自行包裝成 <code>&lt;iframe src="網址" width="100%" height="300"&gt;&lt;/iframe&gt;</code> 貼上。</td>
+                </tr>
+            </table>
+
+            <h3 style="margin-top: 20px;">💡 小提醒與安全性</h3>
+            <ul class="tutorial-list">
+                <li>基於資安考量，只有帶特定屬性的 <code>&lt;iframe&gt;</code> 標籤有被放行，其他例如 <code>&lt;script&gt;</code> 的危險語法都會被強制過濾掉。</li>
+                <li>若只是一般圖片，可以直接使用 Markdown 語法：<code>![圖片說明](圖片網址)</code>。</li>
+            </ul>
+        </div>
+    </div>
+
     <!-- 系統公告畫面 -->
     <div id="announcement-view" class="chat-container hidden">
         <header class="chat-header">
@@ -217,6 +260,17 @@
                 <h1 id="room-title" data-i18n="room_title_default">話題標題</h1>
             </header>
             <div class="chat-grid">
+                <aside class="chat-room-column">
+                    <div class="chat-room-column-inner">
+                        <div class="chat-room-column-header">
+                            <div>
+                                <h2>房間列表</h2>
+                                <p>桌面先覽 &nbsp;• &nbsp;點選即可切換</p>
+                            </div>
+                        </div>
+                        <ul id="chat-room-list" class="chat-room-list"></ul>
+                    </div>
+                </aside>
                 <div class="chat-main">
                     <div id="thread-banner" class="thread-banner hidden">
                         <span data-i18n="thread_parent_label">此為子討論串，原房：</span>
@@ -243,7 +297,7 @@
                     <div class="side-card-list"></div>
                     <form class="side-panel-form hidden" data-panel-id="chat">
                         <input name="title" placeholder="卡片標題" required />
-                        <textarea name="content" rows="3" placeholder="卡片內容 / 支援文字與換行" required></textarea>
+                        <textarea name="content" rows="3" placeholder="卡片內容 / 支援 Markdown 語法" required></textarea>
                         <div class="side-panel-form-actions">
                             <button type="submit">新增</button>
                             <button type="button" class="side-panel-form-cancel">取消</button>
@@ -265,6 +319,7 @@
             <textarea id="input" autocomplete="off" placeholder="輸入匿名訊息..." data-i18n-placeholder="chat_placeholder" required></textarea>
             <button type="submit" data-i18n="send">發送</button>
         </form>
+        <div id="command-suggestions" class="command-suggestions hidden" role="listbox" aria-label="指令建議"></div>
     </div>
 
     <!-- 訊息右鍵/長按互動選單 -->

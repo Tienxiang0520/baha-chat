@@ -3,3 +3,4 @@ node_modules/
 Baha-data.txt
 .env
 create-hash.js
+start_baha.bat

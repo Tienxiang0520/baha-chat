@@ -32,6 +32,7 @@ const tutorialView = document.getElementById('tutorial-view');
 const announcementView = document.getElementById('announcement-view');
 const announcementList = document.getElementById('announcement-list');
 const roomList = document.getElementById('room-list');
+const chatRoomList = document.getElementById('chat-room-list');
 const roomInput = document.getElementById('room-input');
 const createRoomBtn = document.getElementById('create-room-btn');
 const searchInput = document.getElementById('search-input');
@@ -44,11 +45,16 @@ const backFromFeaturesBtn = document.getElementById('back-from-features-btn');
 const boardFeaturesBtn = document.getElementById('board-features-btn');
 const tutorialBtn = document.getElementById('tutorial-btn');
 const backFromTutorialBtn = document.getElementById('back-from-tutorial-btn');
+const embedTutorialBtn = document.getElementById('embed-tutorial-btn');
+const backFromEmbedTutorialBtn = document.getElementById('back-from-embed-tutorial-btn');
+const embedTutorialView = document.getElementById('embed-tutorial-view');
 const announcementBtn = document.getElementById('announcement-btn');
 const backFromAnnouncementBtn = document.getElementById('back-from-announcement-btn');
 const featuresDot = document.getElementById('features-dot');
 const announcementDot = document.getElementById('announcement-dot');
 const sponsorBtn = document.getElementById('sponsor-btn');
+const reduceMotionBtn = document.getElementById('reduce-motion-btn');
+const desktopNotificationsBtn = document.getElementById('desktop-notifications-btn');
 const sponsorView = document.getElementById('sponsor-view');
 const backFromSponsorBtn = document.getElementById('back-from-sponsor-btn');
 const sponsorCopyEmailBtn = document.getElementById('sponsor-copy-email');
@@ -72,6 +78,33 @@ let isTyping = false;
 const typingUsers = new Map();
 const typingThrottles = new Map();
 const pendingAdminTokens = new Map();
+
+const commandSuggestions = document.getElementById('command-suggestions');
+
+const COMMAND_SUGGESTIONS = [
+    { name: '/poll', description: '發起社群投票 (格式: /poll 問題 | 選項一 | 選項二 ...)' },
+    { name: '/canvas', description: '分享桌機白板連結給大家' },
+    { name: '/thread', description: '將訊息延伸成討論串' },
+    { name: '/announce', description: '發佈置頂公告，所有人都會看到' },
+    { name: '/kick', description: '踢出擾亂訪客 (需要管理權限)' },
+    { name: '/ban', description: '封鎖某個匿名 ID 不得再回來' },
+    { name: '/mute', description: '禁言特定 ID (可加分鐘數)' },
+    { name: '/rename', description: '房主可以重新命名房間標題' },
+    { name: '/public', description: '移除房間密碼，開放任意人' },
+    { name: '/private', description: '設置密碼保護，只有有密碼者可進入' },
+    { name: '/clear', description: '清空聊天室歷史紀錄' },
+    { name: '/delete', description: '立刻解散房間並送大家回大廳' },
+    { name: '/md', description: '切換 Markdown 格式開 / 關' },
+    { name: '/party', description: '全螢幕彩色碎紙花' },
+    { name: '/quake', description: '全螢幕震動 (可在設定關閉)' }
+];
+let currentCommandSuggestions = [];
+let currentSuggestionIndex = -1;
+
+const MOTION_STORAGE_KEY = 'baha-reduce-motion';
+const NOTIFICATION_STORAGE_KEY = 'baha-desktop-notifications';
+let reduceMotionEnabled = localStorage.getItem(MOTION_STORAGE_KEY) === 'true';
+let notificationsEnabled = localStorage.getItem(NOTIFICATION_STORAGE_KEY) === 'true';
 
 const desktopBoard = document.getElementById('desktop-board');
 const boardSurface = document.querySelector('.board-surface');
@@ -111,9 +144,26 @@ if (boardFeaturesBtn) {
     });
 }
 
+if (reduceMotionBtn) {
+    reduceMotionBtn.addEventListener('click', () => {
+        applyReduceMotionPreference(!reduceMotionEnabled);
+    });
+}
+
+if (desktopNotificationsBtn) {
+    desktopNotificationsBtn.addEventListener('click', () => {
+        if (notificationsEnabled) {
+            notificationsEnabled = false;
+            localStorage.setItem(NOTIFICATION_STORAGE_KEY, 'false');
+            updateNotificationsButton();
+        } else {
+            requestDesktopNotifications();
+        }
+    });
+}
+
 backFromFeaturesBtn.addEventListener('click', () => {
     featuresView.classList.add('hidden');
-    lobbyView.classList.remove('hidden');
 });
 
 tutorialBtn.addEventListener('click', () => {
@@ -125,6 +175,18 @@ backFromTutorialBtn.addEventListener('click', () => {
     tutorialView.classList.add('hidden');
     featuresView.classList.remove('hidden');
 });
+
+if (embedTutorialBtn && backFromEmbedTutorialBtn && embedTutorialView) {
+    embedTutorialBtn.addEventListener('click', () => {
+        featuresView.classList.add('hidden');
+        embedTutorialView.classList.remove('hidden');
+    });
+
+    backFromEmbedTutorialBtn.addEventListener('click', () => {
+        embedTutorialView.classList.add('hidden');
+        featuresView.classList.remove('hidden');
+    });
+}
 
 announcementBtn.addEventListener('click', () => {
     featuresView.classList.add('hidden');
@@ -166,6 +228,12 @@ function closeContextMenu() {
 document.addEventListener('click', (e) => {
     if (e.target.closest('#message-context-menu')) return; // 點擊選單內部不關閉
     closeContextMenu();
+});
+
+document.addEventListener('click', (e) => {
+    if (!commandSuggestions) return;
+    if (e.target.closest('#command-suggestions') || e.target === input) return;
+    hideCommandSuggestions();
 });
 
 // 執行複製文字
@@ -278,6 +346,8 @@ function applyTranslations() {
     document.title = t.lobby_title;
 }
 applyTranslations();
+applyReduceMotionPreference(reduceMotionEnabled);
+updateNotificationsButton();
 
 /**
  * 根據字串(ID)計算出專屬的 HSL 顏色
@@ -371,6 +441,99 @@ function displayAdminToken(room, token) {
 }
 
 
+function hideCommandSuggestions() {
+    if (!commandSuggestions) return;
+    commandSuggestions.classList.add('hidden');
+    currentCommandSuggestions = [];
+    currentSuggestionIndex = -1;
+    commandSuggestions.innerHTML = '';
+}
+
+function setCommandSuggestionActive(index) {
+    if (!commandSuggestions) return;
+    const buttons = Array.from(commandSuggestions.querySelectorAll('button'));
+    buttons.forEach(btn => btn.classList.remove('command-suggestion-active'));
+    if (index >= 0 && index < buttons.length) {
+        buttons[index].classList.add('command-suggestion-active');
+    }
+}
+
+function applyCommandSuggestion(command) {
+    hideCommandSuggestions();
+    if (!input) return;
+    input.value = `${command} `;
+    input.focus();
+}
+
+function renderCommandSuggestions(value) {
+    if (!commandSuggestions) return;
+    const trimmed = value || '';
+    if (!trimmed.startsWith('/')) {
+        hideCommandSuggestions();
+        return;
+    }
+    const query = trimmed.slice(1).toLowerCase();
+    const matches = COMMAND_SUGGESTIONS.filter(cmd => cmd.name.startsWith(`/${query}`) || query === '')
+        .slice(0, 6);
+    currentCommandSuggestions = matches;
+    if (matches.length === 0) {
+        hideCommandSuggestions();
+        return;
+    }
+    commandSuggestions.innerHTML = matches.map((cmd, index) => `
+        <button type="button" data-index="${index}">
+            <strong>${cmd.name}</strong>
+            <span>${cmd.description}</span>
+        </button>
+    `).join('');
+    commandSuggestions.classList.remove('hidden');
+    currentSuggestionIndex = -1;
+}
+
+function applyReduceMotionPreference(enabled) {
+    reduceMotionEnabled = enabled;
+    localStorage.setItem(MOTION_STORAGE_KEY, enabled ? 'true' : 'false');
+    document.body.classList.toggle('reduce-motion', enabled);
+    if (reduceMotionBtn) {
+        reduceMotionBtn.textContent = enabled ? '減少動態效果 (已啟用)' : '減少動態效果';
+    }
+}
+
+function maybeShowReduceMotionHint() {
+    if (!reduceMotionBtn) return;
+    reduceMotionBtn.textContent = reduceMotionEnabled ? '減少動態效果 (已啟用)' : '減少動態效果';
+}
+
+function updateNotificationsButton() {
+    if (!desktopNotificationsBtn) return;
+    const prefix = notificationsEnabled ? '桌面通知 (已開啟)' : '桌面通知 (關閉中)';
+    desktopNotificationsBtn.textContent = prefix;
+}
+
+function requestDesktopNotifications() {
+    if (!('Notification' in window)) return;
+    Notification.requestPermission().then(permission => {
+        if (permission === 'granted') {
+            notificationsEnabled = true;
+            localStorage.setItem(NOTIFICATION_STORAGE_KEY, 'true');
+        } else {
+            notificationsEnabled = false;
+            localStorage.setItem(NOTIFICATION_STORAGE_KEY, 'false');
+        }
+        updateNotificationsButton();
+    });
+}
+if (commandSuggestions) {
+    commandSuggestions.addEventListener('click', (event) => {
+        const button = event.target.closest('button');
+        if (!button) return;
+        const index = Number(button.dataset.index);
+        if (!Number.isNaN(index) && currentCommandSuggestions[index]) {
+            applyCommandSuggestion(currentCommandSuggestions[index].name);
+        }
+    });
+}
+
 function clearTypingState() {
     typingUsers.clear();
     typingThrottles.forEach(id => clearTimeout(id));
@@ -393,6 +556,7 @@ function addSystemMessage(text) {
  * 觸發派對碎紙花特效
  */
 function triggerPartyEffect() {
+    if (reduceMotionEnabled) return;
     const colors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff'];
     for (let i = 0; i < 60; i++) {
         const confetti = document.createElement('div');
@@ -419,6 +583,22 @@ function escapeHTML(str) {
             '"': '&quot;'
         }[tag] || tag)
     );
+}
+
+function maybeShowDesktopNotification(data) {
+    if (!notificationsEnabled || !('Notification' in window)) return;
+    if (Notification.permission !== 'granted') return;
+    if (!data || data.id === localUserId || data.id === 'System') return;
+    if (document.visibilityState === 'visible') return;
+    const text = (data.text || '').replace(/\n/g, ' ').trim();
+    if (!text) return;
+    const roomName = getRoomDisplayName(data.room || currentRoom) || 'Baha';
+    const notification = new Notification(roomName, {
+        body: text,
+        icon: '/icon/icon-192.png',
+        tag: `baha-room-${data.room || currentRoom}`
+    });
+    setTimeout(() => notification.close(), 4000);
 }
 
 async function copyToClipboard(text) {
@@ -488,6 +668,16 @@ function refreshBoardCanvasSize() {
     });
     boardCanvas.style.width = `${requiredWidth}px`;
     boardCanvas.style.height = `${requiredHeight}px`;
+}
+
+let boardCanvasResizeScheduled = false;
+function scheduleBoardCanvasRefresh() {
+    if (boardCanvasResizeScheduled) return;
+    boardCanvasResizeScheduled = true;
+    requestAnimationFrame(() => {
+        refreshBoardCanvasSize();
+        boardCanvasResizeScheduled = false;
+    });
 }
 
 function initBoardPanning() {
@@ -598,6 +788,83 @@ function createBoardModuleElement(module) {
     handle.appendChild(title);
 
     if (module.removable) {
+        if (module.type === 'custom') {
+            const editBtn = document.createElement('button');
+            editBtn.type = 'button';
+            editBtn.className = 'board-module-edit';
+            editBtn.textContent = '✎';
+            editBtn.title = '編輯卡片';
+            editBtn.addEventListener('click', (event) => {
+                event.stopPropagation();
+                if (wrapper.classList.contains('is-editing')) return;
+                wrapper.classList.add('is-editing');
+                
+                const originalTitle = module.data?.title || '';
+                const originalContent = module.data?.content || '';
+
+                const form = document.createElement('form');
+                form.className = 'board-module-form board-module-edit-form';
+                
+                const titleInput = document.createElement('input');
+                titleInput.name = 'title';
+                titleInput.value = originalTitle;
+                titleInput.placeholder = '卡片標題';
+                titleInput.required = true;
+
+                const contentInput = document.createElement('textarea');
+                contentInput.name = 'content';
+                contentInput.value = originalContent;
+                contentInput.rows = 4;
+                contentInput.placeholder = '卡片內容 / 支援 Markdown 語法';
+                contentInput.required = true;
+
+                const actions = document.createElement('div');
+                actions.className = 'side-panel-form-actions';
+                actions.style.marginTop = '10px';
+                
+                const saveBtn = document.createElement('button');
+                saveBtn.type = 'submit';
+                saveBtn.textContent = '儲存';
+                
+                const cancelBtn = document.createElement('button');
+                cancelBtn.type = 'button';
+                cancelBtn.className = 'side-panel-form-cancel';
+                cancelBtn.textContent = '取消';
+
+                actions.appendChild(saveBtn);
+                actions.appendChild(cancelBtn);
+
+                form.appendChild(titleInput);
+                form.appendChild(contentInput);
+                form.appendChild(actions);
+
+                const originalBodyHtml = body.innerHTML;
+                const originalTitleText = title.textContent;
+
+                title.textContent = '編輯卡片';
+                body.innerHTML = '';
+                body.appendChild(form);
+                
+                // 為了讓使用者聚焦
+                titleInput.focus();
+
+                cancelBtn.addEventListener('click', () => {
+                   wrapper.classList.remove('is-editing');
+                   title.textContent = originalTitleText;
+                   body.innerHTML = originalBodyHtml;
+                });
+
+                form.addEventListener('submit', (e) => {
+                   e.preventDefault();
+                   module.data.title = titleInput.value.trim();
+                   module.data.content = contentInput.value.trim();
+                   saveBoardModules();
+                   renderBoardModules();
+                });
+            });
+            handle.appendChild(editBtn);
+        }
+
         const removeBtn = document.createElement('button');
         removeBtn.type = 'button';
         removeBtn.className = 'board-module-remove';
@@ -707,7 +974,8 @@ function createBoardModuleElement(module) {
         case 'custom':
         default: {
             const content = document.createElement('div');
-            content.innerHTML = escapeHTML(module.data?.content || '').replace(/\n/g, '<br>');
+            const dataContent = module.data?.content || '';
+            content.innerHTML = typeof parseMarkdown === 'function' ? parseMarkdown(dataContent) : escapeHTML(dataContent).replace(/\n/g, '<br>');
             body.appendChild(content);
             break;
         }
@@ -744,7 +1012,7 @@ function attachBoardDrag(handle, moduleEl, module) {
         module.y = Math.max(originY + dy, 0);
         moduleEl.style.left = `${module.x}px`;
         moduleEl.style.top = `${module.y}px`;
-        refreshBoardCanvasSize();
+        scheduleBoardCanvasRefresh();
     };
 
     const onPointerUp = () => {
@@ -807,7 +1075,7 @@ function attachModuleResize(resizer, moduleEl, module) {
         module.height = newHeight;
         moduleEl.style.width = `${newWidth}px`;
         moduleEl.style.height = `${newHeight}px`;
-        refreshBoardCanvasSize();
+        scheduleBoardCanvasRefresh();
     };
 
     const onUp = () => {
@@ -907,7 +1175,7 @@ function initializeBoard() {
  */
 
 const markdownParser = window.markdownit?.({
-    html: false,
+    html: true,
     linkify: true,
     typographer: true
 });
@@ -971,7 +1239,10 @@ function parseMarkdown(text) {
 
     try {
         const rawHtml = markdownParser.render(preparedText);
-        let sanitized = DOMPurify.sanitize(rawHtml);
+        let sanitized = DOMPurify.sanitize(rawHtml, {
+            ADD_TAGS: ['iframe'],
+            ADD_ATTR: ['allow', 'allowfullscreen', 'frameborder', 'scrolling', 'src', 'width', 'height', 'type', 'id']
+        });
 
         lockPlaceholders.forEach(({ placeholder, password, encodedContent }) => {
             const lockedHtml = `<div class="locked-message-container">
@@ -1286,7 +1557,7 @@ backBtn.addEventListener('click', () => {
     if (currentRoom) {
         socket.emit('leave room', currentRoom);
     }
-    lobbyView.classList.remove('hidden');
+    desktopBoard.classList.remove('hidden');
     chatView.classList.add('hidden');
     currentRoom = '';
     messages.innerHTML = ''; // 清空聊天畫面以防下次進入時疊加
@@ -1325,6 +1596,9 @@ function createRoomListItem(room) {
     infoSpan.appendChild(userCountSpan);
     infoSpan.appendChild(timeSpan);
     li.appendChild(infoSpan);
+    if (room.name === currentRoom) {
+        li.classList.add('active');
+    }
 
     li.addEventListener('click', () => {
         let password = null;
@@ -1340,6 +1614,9 @@ function createRoomListItem(room) {
 function renderRoomList() {
     let searchTerm = searchInput.value.toLowerCase().trim();
     const targetLists = [roomList];
+    if (chatRoomList) {
+        targetLists.push(chatRoomList);
+    }
     if (boardRoomListElement) {
         targetLists.push(boardRoomListElement);
     }
@@ -1434,10 +1711,12 @@ socket.on('join success', (roomInfo) => {
     
     // 切換視圖到聊天室
     lobbyView.classList.add('hidden');
+    desktopBoard.classList.add('hidden');
     chatView.classList.remove('hidden');
     if (roomName && pendingAdminTokens.has(roomName)) {
         displayAdminToken(roomName, pendingAdminTokens.get(roomName));
     }
+    renderRoomList();
 });
 
 // 監聽加入房間失敗 (密碼錯誤)
@@ -1546,6 +1825,7 @@ form.addEventListener('submit', function(e) {
         replyingTo = null; // 送出後清空回覆狀態
         replyPreview.classList.add('hidden');
         sendTypingStatus(false);
+        hideCommandSuggestions();
     }
 });
 
@@ -1563,10 +1843,35 @@ input.addEventListener('input', function() {
     sendTypingStatus(true);
     clearTimeout(typingTimer);
     typingTimer = setTimeout(() => sendTypingStatus(false), TYPING_INACTIVITY_MS);
+    renderCommandSuggestions(this.value);
 });
 
 // 讓使用者在聊天輸入框按 Enter 也能發送訊息
 input.addEventListener('keydown', function(e) {
+    const isSuggestionOpen = commandSuggestions && !commandSuggestions.classList.contains('hidden');
+    if (isSuggestionOpen) {
+        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+            e.preventDefault();
+            if (e.key === 'ArrowDown') {
+                currentSuggestionIndex = (currentSuggestionIndex + 1) % currentCommandSuggestions.length;
+            } else {
+                currentSuggestionIndex = (currentSuggestionIndex - 1 + currentCommandSuggestions.length) % currentCommandSuggestions.length;
+            }
+            setCommandSuggestionActive(currentSuggestionIndex);
+            return;
+        }
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            if (currentSuggestionIndex >= 0 && currentCommandSuggestions[currentSuggestionIndex]) {
+                applyCommandSuggestion(currentCommandSuggestions[currentSuggestionIndex].name);
+            }
+            return;
+        }
+        if (e.key === 'Escape') {
+            hideCommandSuggestions();
+            return;
+        }
+    }
     // 檢查是否只按下 Enter 鍵 (沒有組合 Shift 等)
     if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault(); // 防止 Enter 的預設行為
@@ -1588,10 +1893,10 @@ socket.on('chat history', function(history) {
 // 監聽來自伺服器的訊息
 socket.on('chat message', function(data) {
     // 觸發全螢幕特效
-    if (data.effect === 'quake') {
+    if (data.effect === 'quake' && !reduceMotionEnabled) {
         document.body.classList.add('quake-effect');
         setTimeout(() => document.body.classList.remove('quake-effect'), 800);
-    } else if (data.effect === 'party') {
+    } else if (data.effect === 'party' && !reduceMotionEnabled) {
         triggerPartyEffect();
     }
 
@@ -1609,12 +1914,17 @@ messageTimestamps.push(now);
     } else {
         // 頻率正常時，使用傳統模式顯示並自動捲動
         addMessage(data, false);
+        maybeShowDesktopNotification(data);
     }
 });
 
 // 監聽 Socket.io 連線成功事件 (隱藏載入畫面)
 socket.on('connect', () => {
     loadingOverlay.classList.add('hidden');
+    // 若沒有在聊天室內，確保白板顯示在前景
+    if (!currentRoom && desktopBoard) {
+        desktopBoard.classList.remove('hidden');
+    }
 });
 
 // 監聽 Socket.io 斷線事件 (顯示載入畫面)
@@ -1754,6 +2064,78 @@ function createSideCardElement(card, panelId) {
     header.appendChild(title);
 
     if (card.custom) {
+        const editBtn = document.createElement('button');
+        editBtn.type = 'button';
+        editBtn.className = 'side-card-edit-btn';
+        editBtn.title = '編輯卡片';
+        editBtn.textContent = '✎';
+        editBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (article.classList.contains('is-editing')) return;
+            article.classList.add('is-editing');
+            
+            const form = document.createElement('form');
+            form.className = 'side-panel-form side-card-edit-form';
+            // 覆蓋原本 side-panel-form 預設隱藏或其他樣式
+            form.style.display = 'flex';
+            
+            const titleInput = document.createElement('input');
+            titleInput.name = 'title';
+            titleInput.value = card.title;
+            titleInput.placeholder = '卡片標題';
+            titleInput.required = true;
+
+            const contentInput = document.createElement('textarea');
+            contentInput.name = 'content';
+            contentInput.value = card.content;
+            contentInput.rows = 4;
+            contentInput.placeholder = '卡片內容 / 支援 Markdown 語法';
+            contentInput.required = true;
+
+            const actions = document.createElement('div');
+            actions.className = 'side-panel-form-actions';
+            
+            const saveBtn = document.createElement('button');
+            saveBtn.type = 'submit';
+            saveBtn.textContent = '儲存';
+            
+            const cancelBtn = document.createElement('button');
+            cancelBtn.type = 'button';
+            cancelBtn.className = 'side-panel-form-cancel';
+            cancelBtn.textContent = '取消';
+
+            actions.appendChild(saveBtn);
+            actions.appendChild(cancelBtn);
+
+            form.appendChild(titleInput);
+            form.appendChild(contentInput);
+            form.appendChild(actions);
+
+            const originalBodyHtml = body.innerHTML;
+            const originalTitleText = title.textContent;
+
+            title.textContent = '編輯卡片';
+            body.innerHTML = '';
+            body.appendChild(form);
+            
+            titleInput.focus();
+
+            cancelBtn.addEventListener('click', () => {
+                article.classList.remove('is-editing');
+                title.textContent = originalTitleText;
+                body.innerHTML = originalBodyHtml;
+            });
+
+            form.addEventListener('submit', (evt) => {
+                evt.preventDefault();
+                card.title = titleInput.value.trim();
+                card.content = contentInput.value.trim();
+                saveSidePanelConfig(panelId);
+                renderSidePanel(panelId);
+            });
+        });
+        header.appendChild(editBtn);
+
         const removeBtn = document.createElement('button');
         removeBtn.type = 'button';
         removeBtn.className = 'side-card-remove-btn';
@@ -1775,7 +2157,9 @@ function createSideCardElement(card, panelId) {
     if (card.html) {
         body.innerHTML = card.content;
     } else {
-        body.innerHTML = escapeHTML(card.content).replace(/\n/g, '<br>');
+        body.innerHTML = typeof parseMarkdown === 'function' 
+            ? parseMarkdown(card.content) 
+            : escapeHTML(card.content).replace(/\n/g, '<br>');
     }
     article.appendChild(body);
 
