@@ -39,6 +39,10 @@ const searchInput = document.getElementById('search-input');
 let boardSearchInputElement = null;
 let isSearchSyncing = false;
 let boardRoomListElement = null;
+let boardRoomListPagerElement = null;
+let boardRoomListPagerStatusElement = null;
+let boardRoomListPrevButton = null;
+let boardRoomListNextButton = null;
 let roomListRenderScheduled = false;
 const backBtn = document.getElementById('back-btn');
 const featuresBtn = document.getElementById('features-btn');
@@ -49,6 +53,13 @@ const backFromTutorialBtn = document.getElementById('back-from-tutorial-btn');
 const embedTutorialBtn = document.getElementById('embed-tutorial-btn');
 const backFromEmbedTutorialBtn = document.getElementById('back-from-embed-tutorial-btn');
 const embedTutorialView = document.getElementById('embed-tutorial-view');
+const serverStatusBtn = document.getElementById('server-status-btn');
+const serverStatusView = document.getElementById('server-status-view');
+const backFromServerStatusBtn = document.getElementById('back-from-server-status-btn');
+const serverStatusLoading = document.getElementById('server-status-loading');
+const serverStatusGrid = document.getElementById('server-status-grid');
+const serverStatusUpdated = document.getElementById('server-status-updated');
+const serverStatusRefreshBtn = document.getElementById('server-status-refresh-btn');
 const announcementBtn = document.getElementById('announcement-btn');
 const backFromAnnouncementBtn = document.getElementById('back-from-announcement-btn');
 const featuresDot = document.getElementById('features-dot');
@@ -130,10 +141,13 @@ let replyingTo = null; // 紀錄目前正在回覆的訊息資料
 let selectedMessageMid = null;
 let activeThreadParent = null;
 let activeThreadTitle = '';
+let serverStatusRefreshTimer = null;
 
 function showFeaturesView() {
     lobbyView.classList.add('hidden');
     chatView.classList.add('hidden');
+    serverStatusView?.classList.add('hidden');
+    stopServerStatusAutoRefresh();
     if (desktopBoard) {
         desktopBoard.classList.add('hidden');
     }
@@ -143,6 +157,7 @@ function showFeaturesView() {
 
 function restoreMainWorkspace() {
     featuresView.classList.add('hidden');
+    serverStatusView?.classList.add('hidden');
     if (currentRoom) {
         chatView.classList.remove('hidden');
         return;
@@ -152,6 +167,104 @@ function restoreMainWorkspace() {
     } else {
         lobbyView.classList.remove('hidden');
     }
+}
+
+function formatBytes(bytes) {
+    if (!Number.isFinite(bytes)) return 'N/A';
+    const units = ['B', 'KB', 'MB', 'GB'];
+    let value = bytes;
+    let unitIndex = 0;
+    while (value >= 1024 && unitIndex < units.length - 1) {
+        value /= 1024;
+        unitIndex += 1;
+    }
+    return `${value.toFixed(value >= 10 || unitIndex === 0 ? 0 : 1)} ${units[unitIndex]}`;
+}
+
+function formatNumber(value, digits = 2) {
+    return Number.isFinite(value) ? value.toFixed(digits) : 'N/A';
+}
+
+function formatDuration(seconds) {
+    if (!Number.isFinite(seconds) || seconds < 0) return 'N/A';
+    const days = Math.floor(seconds / 86400);
+    const hours = Math.floor((seconds % 86400) / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    if (days > 0) return `${days} 天 ${hours} 小時`;
+    if (hours > 0) return `${hours} 小時 ${minutes} 分`;
+    if (minutes > 0) return `${minutes} 分 ${secs} 秒`;
+    return `${secs} 秒`;
+}
+
+function stopServerStatusAutoRefresh() {
+    if (serverStatusRefreshTimer) {
+        clearInterval(serverStatusRefreshTimer);
+        serverStatusRefreshTimer = null;
+    }
+}
+
+function renderServerStatusCard(title, value, description = '') {
+    const card = document.createElement('article');
+    card.className = 'server-status-card';
+
+    const titleEl = document.createElement('h3');
+    titleEl.textContent = title;
+    const valueEl = document.createElement('strong');
+    valueEl.textContent = value;
+    const descEl = document.createElement('p');
+    descEl.textContent = description;
+
+    card.appendChild(titleEl);
+    card.appendChild(valueEl);
+    if (description) {
+        card.appendChild(descEl);
+    }
+    return card;
+}
+
+function renderServerStatus(status) {
+    if (!serverStatusGrid || !serverStatusLoading || !serverStatusUpdated) return;
+    serverStatusLoading.classList.add('hidden');
+    serverStatusGrid.classList.remove('hidden');
+    serverStatusGrid.innerHTML = '';
+
+    const loadAverage = Array.isArray(status.loadAverage) ? status.loadAverage : [0, 0, 0];
+    const memoryUsage = status.memoryUsage || {};
+
+    serverStatusGrid.appendChild(renderServerStatusCard('在線人數', String(status.connectedUsers ?? 0), '目前 socket 連線數'));
+    serverStatusGrid.appendChild(renderServerStatusCard('房間數', String(status.roomCount ?? 0), '資料庫中的房間總數'));
+    serverStatusGrid.appendChild(renderServerStatusCard('公告數', String(status.announcementCount ?? 0), '系統公告數量'));
+    serverStatusGrid.appendChild(renderServerStatusCard('伺服器負載', `${formatNumber(loadAverage[0])} / ${formatNumber(loadAverage[1])} / ${formatNumber(loadAverage[2])}`, '1 / 5 / 15 分鐘平均'));
+    serverStatusGrid.appendChild(renderServerStatusCard('記憶體使用', `${formatBytes(memoryUsage.rss)} RSS`, `Heap ${formatBytes(memoryUsage.heapUsed)} / ${formatBytes(memoryUsage.heapTotal)}`));
+    serverStatusGrid.appendChild(renderServerStatusCard('執行時間', formatDuration(status.uptimeSeconds), `${status.nodeVersion || 'Node.js'} · ${status.platform || ''} ${status.arch || ''}`.trim()));
+    serverStatusGrid.appendChild(renderServerStatusCard('主機資訊', `${status.hostname || 'N/A'} / PID ${status.pid ?? 'N/A'}`, new Date(status.timestamp || Date.now()).toLocaleString()));
+
+    serverStatusUpdated.textContent = `最後更新：${new Date(status.timestamp || Date.now()).toLocaleString()}`;
+}
+
+function loadServerStatus() {
+    if (!serverStatusLoading || !serverStatusGrid) return;
+    serverStatusLoading.classList.remove('hidden');
+    serverStatusLoading.textContent = '讀取中...';
+    serverStatusGrid.classList.add('hidden');
+
+    socket.emit('request server status', (status) => {
+        if (!status || status.error) {
+            serverStatusLoading.textContent = status?.error || '無法取得伺服器狀態';
+            return;
+        }
+        if (serverStatusView?.classList.contains('hidden')) return;
+        renderServerStatus(status);
+    });
+}
+
+function showServerStatusView() {
+    featuresView.classList.add('hidden');
+    serverStatusView?.classList.remove('hidden');
+    loadServerStatus();
+    stopServerStatusAutoRefresh();
+    serverStatusRefreshTimer = setInterval(loadServerStatus, 5000);
 }
 
 // ===== 畫面切換邏輯 =====
@@ -206,6 +319,22 @@ if (embedTutorialBtn && backFromEmbedTutorialBtn && embedTutorialView) {
     backFromEmbedTutorialBtn.addEventListener('click', () => {
         embedTutorialView.classList.add('hidden');
         featuresView.classList.remove('hidden');
+    });
+}
+
+if (serverStatusBtn && backFromServerStatusBtn && serverStatusView) {
+    serverStatusBtn.addEventListener('click', () => {
+        showServerStatusView();
+    });
+
+    backFromServerStatusBtn.addEventListener('click', () => {
+        stopServerStatusAutoRefresh();
+        serverStatusView.classList.add('hidden');
+        featuresView.classList.remove('hidden');
+    });
+
+    serverStatusRefreshBtn?.addEventListener('click', () => {
+        loadServerStatus();
     });
 }
 
@@ -721,6 +850,46 @@ const BOARD_MODULE_TITLES = {
 let boardModules = [];
 let boardSaveTimer = null;
 let boardMobileCursorY = 16;
+let boardRoomListPage = 0;
+const BOARD_MOBILE_ROOM_PAGE_SIZE = 5;
+
+function getBoardRoomPageSize() {
+    return isDesktopBoardActive() ? Number.POSITIVE_INFINITY : BOARD_MOBILE_ROOM_PAGE_SIZE;
+}
+
+function clampBoardRoomPage(totalRooms) {
+    if (isDesktopBoardActive()) {
+        boardRoomListPage = 0;
+        return 0;
+    }
+    const pageSize = getBoardRoomPageSize();
+    const maxPage = Math.max(Math.ceil(totalRooms / pageSize) - 1, 0);
+    boardRoomListPage = Math.min(Math.max(boardRoomListPage, 0), maxPage);
+    return maxPage;
+}
+
+function updateBoardRoomPager(totalRooms) {
+    if (!boardRoomListPagerElement) return;
+    const pageSize = getBoardRoomPageSize();
+    const shouldShowPager = !isDesktopBoardActive() && totalRooms > pageSize;
+    boardRoomListPagerElement.classList.toggle('hidden', !shouldShowPager);
+    if (!shouldShowPager) {
+        boardRoomListPage = 0;
+        return;
+    }
+
+    const maxPage = Math.max(Math.ceil(totalRooms / pageSize) - 1, 0);
+    boardRoomListPage = Math.min(Math.max(boardRoomListPage, 0), maxPage);
+    if (boardRoomListPagerStatusElement) {
+        boardRoomListPagerStatusElement.textContent = `${boardRoomListPage + 1} / ${maxPage + 1}`;
+    }
+    if (boardRoomListPrevButton) {
+        boardRoomListPrevButton.disabled = boardRoomListPage <= 0;
+    }
+    if (boardRoomListNextButton) {
+        boardRoomListNextButton.disabled = boardRoomListPage >= maxPage;
+    }
+}
 
 function refreshBoardCanvasSize() {
     if (!boardCanvas) return;
@@ -887,6 +1056,8 @@ function createBoardModuleElement(module) {
         const mobileWidth = Math.max(Math.min(window.innerWidth - 32, 420), 280);
         const mobileHeight = module.type === 'actions'
             ? Math.max(module.height || 180, 460)
+            : module.type === 'rooms'
+                ? Math.max(module.height || 240, 500)
             : (module.height || 180);
         module.mobileWidth = mobileWidth;
         module.mobileHeight = mobileHeight;
@@ -1085,6 +1256,45 @@ function createBoardModuleElement(module) {
             list.className = 'board-room-list';
             boardRoomListElement = list;
             body.appendChild(list);
+
+            const pager = document.createElement('div');
+            pager.className = 'board-room-list-pager';
+
+            const prevButton = document.createElement('button');
+            prevButton.type = 'button';
+            prevButton.className = 'board-room-list-pager-btn board-room-list-pager-btn--prev';
+            prevButton.textContent = '↑';
+            prevButton.title = '往前看 5 筆';
+            prevButton.setAttribute('aria-label', '往前看 5 筆');
+            prevButton.addEventListener('click', () => {
+                if (boardRoomListPage <= 0) return;
+                boardRoomListPage -= 1;
+                renderRoomList();
+            });
+
+            const status = document.createElement('span');
+            status.className = 'board-room-list-pager-status';
+
+            const nextButton = document.createElement('button');
+            nextButton.type = 'button';
+            nextButton.className = 'board-room-list-pager-btn board-room-list-pager-btn--next';
+            nextButton.textContent = '↓';
+            nextButton.title = '往後看 5 筆';
+            nextButton.setAttribute('aria-label', '往後看 5 筆');
+            nextButton.addEventListener('click', () => {
+                boardRoomListPage += 1;
+                renderRoomList();
+            });
+
+            pager.appendChild(prevButton);
+            pager.appendChild(status);
+            pager.appendChild(nextButton);
+            body.appendChild(pager);
+
+            boardRoomListPagerElement = pager;
+            boardRoomListPagerStatusElement = status;
+            boardRoomListPrevButton = prevButton;
+            boardRoomListNextButton = nextButton;
             break;
         }
         case 'actions': {
@@ -1240,6 +1450,10 @@ function renderBoardModules() {
     if (!boardCanvas) return;
     boardCanvas.innerHTML = '';
     boardRoomListElement = null;
+    boardRoomListPagerElement = null;
+    boardRoomListPagerStatusElement = null;
+    boardRoomListPrevButton = null;
+    boardRoomListNextButton = null;
     boardSearchInputElement = null;
     boardMobileCursorY = 16;
     boardModules.forEach(module => {
@@ -1755,14 +1969,14 @@ function createRoomListItem(room) {
 
 function renderRoomList() {
     let searchTerm = searchInput.value.toLowerCase().trim();
-    const targetLists = [roomList];
+    const primaryLists = [roomList];
     if (chatRoomList) {
-        targetLists.push(chatRoomList);
+        primaryLists.push(chatRoomList);
     }
+    primaryLists.forEach(list => list.innerHTML = '');
     if (boardRoomListElement) {
-        targetLists.push(boardRoomListElement);
+        boardRoomListElement.innerHTML = '';
     }
-    targetLists.forEach(list => list.innerHTML = '');
 
     let sortByHot = false;
     let filterLocked = null;
@@ -1803,8 +2017,27 @@ function renderRoomList() {
     }
 
     filteredRooms.forEach(room => {
-        targetLists.forEach(list => list.appendChild(createRoomListItem(room)));
+        primaryLists.forEach(list => list.appendChild(createRoomListItem(room)));
     });
+
+    const boardPageSize = getBoardRoomPageSize();
+    if (boardRoomListElement) {
+        const maxPage = clampBoardRoomPage(filteredRooms.length);
+        const shouldPaginate = !isDesktopBoardActive() && filteredRooms.length > boardPageSize;
+        const startIndex = shouldPaginate ? boardRoomListPage * boardPageSize : 0;
+        const roomsForBoard = shouldPaginate
+            ? filteredRooms.slice(startIndex, startIndex + boardPageSize)
+            : filteredRooms;
+        roomsForBoard.forEach(room => {
+            boardRoomListElement.appendChild(createRoomListItem(room));
+        });
+        updateBoardRoomPager(filteredRooms.length);
+        if (!shouldPaginate && maxPage > 0) {
+            boardRoomListPage = 0;
+        }
+    } else if (boardRoomListPagerElement) {
+        updateBoardRoomPager(filteredRooms.length);
+    }
 }
 
 function scheduleRoomListRender() {

@@ -14,6 +14,7 @@ const log = (...args) => console.log(`[${new Date().toLocaleTimeString()}]`, ...
 const error = (...args) => console.error(`[${new Date().toLocaleTimeString()}] ❌`, ...args);
 const express = require('express');
 const http = require('http');
+const os = require('os');
 const { Server } = require('socket.io');
 const mongoose = require('mongoose');
 const nodemailer = require('nodemailer');
@@ -112,6 +113,34 @@ async function fetchLinkPreview(text) {
     return null;
 }
 
+async function buildServerStatus(io) {
+    const [roomCount, announcementCount] = await Promise.all([
+        Room.countDocuments(),
+        Announcement.countDocuments()
+    ]);
+
+    const memoryUsage = process.memoryUsage();
+    return {
+        connectedUsers: io.engine.clientsCount,
+        roomCount,
+        announcementCount,
+        uptimeSeconds: Math.floor(process.uptime()),
+        loadAverage: os.loadavg(),
+        memoryUsage: {
+            rss: memoryUsage.rss,
+            heapUsed: memoryUsage.heapUsed,
+            heapTotal: memoryUsage.heapTotal,
+            external: memoryUsage.external
+        },
+        platform: os.platform(),
+        arch: os.arch(),
+        nodeVersion: process.version,
+        hostname: os.hostname(),
+        pid: process.pid,
+        timestamp: new Date().toISOString()
+    };
+}
+
 // 監聽使用者的 Socket.io 連線
 io.on('connection', async (socket) => {
     const requestedId = socket.handshake?.auth?.userId;
@@ -133,6 +162,22 @@ io.on('connection', async (socket) => {
     // 傳送歷史公告列表 (最多拿最新 20 筆)
     const announcements = await Announcement.find().sort({ createdAt: -1 }).limit(20);
     socket.emit('announcement list', announcements);
+
+    socket.on('request server status', async (callback) => {
+        try {
+            const status = await buildServerStatus(io);
+            if (typeof callback === 'function') {
+                callback(status);
+            } else {
+                socket.emit('server status', status);
+            }
+        } catch (err) {
+            error('取得伺服器狀態失敗:', err);
+            if (typeof callback === 'function') {
+                callback({ error: '無法取得伺服器狀態' });
+            }
+        }
+    });
 
     registerRoomHandlers(socket, io);
     registerThreadHandlers(socket, io);

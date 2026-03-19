@@ -114,12 +114,31 @@
                 📢 <span data-i18n="announcements_title">系統公告</span>
                 <span id="announcement-dot" class="notification-dot hidden"></span>
             </button>
+            <button id="server-status-btn" class="feature-menu-btn">🖥️ 伺服器狀態</button>
             <button id="sponsor-btn" class="feature-menu-btn">
                 💖 <span data-i18n="sponsor_button">贊助 Baha</span>
             </button>
             <button id="reduce-motion-btn" class="feature-menu-btn feature-menu-btn--secondary">減少動態效果</button>
             <button id="desktop-notifications-btn" class="feature-menu-btn feature-menu-btn--secondary">桌面通知</button>
             <!-- 未來可以在這裡加入設定、個人首頁等按鈕 -->
+        </div>
+    </div>
+
+    <!-- 伺服器狀態畫面 -->
+    <div id="server-status-view" class="chat-container hidden">
+        <header class="chat-header">
+            <button id="back-from-server-status-btn" class="header-btn" data-i18n="back">⬅ 返回</button>
+            <h1>🖥️ 伺服器狀態</h1>
+            <div style="width: 60px; visibility: hidden;"></div>
+        </header>
+        <div class="tutorial-content server-status-content">
+            <p class="server-status-summary">查看目前伺服器連線數、房間數、記憶體使用量與負載。</p>
+            <div id="server-status-loading" class="server-status-loading">讀取中...</div>
+            <div id="server-status-grid" class="server-status-grid hidden"></div>
+            <div class="server-status-meta">
+                <span id="server-status-updated">尚未更新</span>
+                <button id="server-status-refresh-btn" type="button" class="feature-menu-btn feature-menu-btn--secondary">重新整理</button>
+            </div>
         </div>
     </div>
 
