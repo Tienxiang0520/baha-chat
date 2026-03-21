@@ -13,6 +13,7 @@
     <link rel="manifest" href="/manifest.json">
     <link rel="apple-touch-icon" href="/icon/icon-192.png">
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="chat/chat-room.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css">
 </head>
 <body>
@@ -21,6 +22,11 @@
         <div class="spinner"></div>
         <h2 data-i18n="connecting">連線中...</h2>
         <p data-i18n="waking_up">若伺服器正在從休眠中喚醒，可能需要等待約 30~50 秒，請稍候 ☕</p>
+    </div>
+
+    <div id="app-version-badge" class="app-version-badge hidden" aria-live="polite">
+        <span class="app-version-badge__label">Version</span>
+        <strong id="app-version-text">--</strong>
     </div>
 
     <!-- 大廳畫面：用來顯示話題列表與建立話題 -->
@@ -71,7 +77,7 @@
         <header class="desktop-board-header">
             <div>
                 <h2>桌機白板</h2>
-                <p>像微軟白板一樣拖移組件、擺放自訂內容，建立你自己的版面。</p>
+                <p>Baha-chat</p>
             </div>
             <div class="desktop-board-actions">
                 <button id="board-open-palette-btn" type="button">新增組件</button>
@@ -79,7 +85,6 @@
                 <button id="board-features-btn" type="button" class="board-features-btn" data-i18n="features">功能</button>
             </div>
         </header>
-        <p class="board-mobile-hint">手機版可直接拖動畫布瀏覽，組件在手機上固定不拖曳。</p>
         <div id="board-palette" class="board-palette hidden">
             <p>選擇要新增的組件</p>
             <div class="board-palette-buttons">
@@ -214,7 +219,10 @@
                 <tr><th>服務</th><th>操作方式</th></tr>
                 <tr>
                     <td><strong>YouTube</strong></td>
-                    <td>點擊影片底下的「分享」➔「嵌入」，複製 <code>&lt;iframe src="..."&gt;&lt;/iframe&gt;</code> 貼上。</td>
+                    <td>
+                        點擊影片底下的「分享」➔「嵌入」，複製 <code>&lt;iframe src="..."&gt;&lt;/iframe&gt;</code> 貼上。<br>
+                        <strong>注意：</strong> 連結要使用 <code>https://www.youtube.com/embed/影片ID</code>，不要直接貼 <code>watch?v=</code>。
+                    </td>
                 </tr>
                 <tr>
                     <td><strong>Spotify</strong></td>
@@ -222,7 +230,10 @@
                 </tr>
                 <tr>
                     <td><strong>Google 地圖</strong></td>
-                    <td>搜尋地標，點擊側邊欄的「分享」➔「嵌入地圖」，複製 HTML 貼上。</td>
+                    <td>
+                        搜尋地標後，點擊側邊欄的「分享」➔「嵌入地圖」，複製 HTML 貼上。<br>
+                        <strong>注意：</strong> 像 <code>maps.app.goo.gl</code> 這種分享短連結不能直接放進 <code>&lt;iframe&gt;</code>，要用 Google 地圖提供的 <code>embed</code> 程式碼。
+                    </td>
                 </tr>
                 <tr>
                     <td><strong>各式工具 / 網站</strong></td>
@@ -234,6 +245,8 @@
             <ul class="tutorial-list">
                 <li>基於資安考量，只有帶特定屬性的 <code>&lt;iframe&gt;</code> 標籤有被放行，其他例如 <code>&lt;script&gt;</code> 的危險語法都會被強制過濾掉。</li>
                 <li>若只是一般圖片，可以直接使用 Markdown 語法：<code>![圖片說明](圖片網址)</code>。</li>
+                <li>YouTube 請使用 <code>https://www.youtube.com/embed/影片ID</code> 格式，直接貼 <code>watch?v=</code> 會被瀏覽器拒絕嵌入。</li>
+                <li>Google 地圖請使用「嵌入地圖」的 <code>iframe</code>，<code>maps.app.goo.gl</code> 這類分享短連結不能直接嵌入。</li>
             </ul>
         </div>
     </div>
@@ -273,86 +286,7 @@
         </div>
     </div>
 
-    <!-- 聊天室畫面：進入特定話題後顯示，預設隱藏 -->
-        <div id="chat-view" class="chat-container hidden">
-            <header class="chat-header">
-                <button id="back-btn" class="header-btn" data-i18n="back_to_lobby">⬅ 返回大廳</button>
-                <h1 id="room-title" data-i18n="room_title_default">話題標題</h1>
-            </header>
-            <div class="chat-grid">
-                <aside class="chat-room-column">
-                    <div class="chat-room-column-inner">
-                        <div class="chat-room-column-header">
-                            <div>
-                                <h2>房間列表</h2>
-                                <p>桌面先覽 &nbsp;• &nbsp;點選即可切換</p>
-                            </div>
-                        </div>
-                        <ul id="chat-room-list" class="chat-room-list"></ul>
-                    </div>
-                </aside>
-                <div class="chat-main">
-                    <div id="thread-banner" class="thread-banner hidden">
-                        <span data-i18n="thread_parent_label">此為子討論串，原房：</span>
-                        <span id="thread-parent-name"></span>
-                        <button id="thread-back-btn" type="button" data-i18n="thread_back">返回主頻道</button>
-                    </div>
-                    <div id="admin-key-banner" class="admin-key-banner hidden" role="status" aria-live="polite">
-                        <span id="admin-key-label">管理金鑰：</span>
-                        <span id="admin-key-text"></span>
-                        <button id="admin-key-copy" type="button" class="admin-key-copy">複製</button>
-                        <button id="admin-key-close" type="button" class="admin-key-close" aria-label="關閉">✖</button>
-                    </div>
-                    <div id="danmaku-container"></div>
-                    <ul id="messages"></ul>
-                </div>
-                <aside class="chat-side side-panel" data-panel-id="chat">
-                    <div class="side-panel-header">
-                        <div>
-                            <h2>聊天室小幫手</h2>
-                            <p>為桌機使用者整理熱點指令、公告與快捷入口。</p>
-                        </div>
-                        <button class="side-panel-add-btn" type="button">+ 新增卡片</button>
-                    </div>
-                    <div class="side-card-list"></div>
-                    <form class="side-panel-form hidden" data-panel-id="chat">
-                        <input name="title" placeholder="卡片標題" required />
-                        <textarea name="content" rows="3" placeholder="卡片內容 / 支援 Markdown 語法" required></textarea>
-                        <div class="side-panel-form-actions">
-                            <button type="submit">新增</button>
-                            <button type="button" class="side-panel-form-cancel">取消</button>
-                        </div>
-                    </form>
-                </aside>
-            </div>
-        
-        <!-- 準備回覆的預覽區塊 (預設隱藏) -->
-        <div id="reply-preview" class="hidden">
-            <div class="reply-content">
-                <span data-i18n="reply_to_prefix">↩️ 回覆</span> <span id="reply-preview-user"></span>：<span id="reply-preview-text"></span>
-            </div>
-            <button id="cancel-reply-btn" type="button">✖</button>
-        </div>
-
-        <div id="typing-indicator" class="typing-indicator hidden"></div>
-        <form id="form" action="">
-            <textarea id="input" autocomplete="off" placeholder="輸入匿名訊息..." data-i18n-placeholder="chat_placeholder" required></textarea>
-            <button type="submit" data-i18n="send">發送</button>
-        </form>
-        <div id="command-suggestions" class="command-suggestions hidden" role="listbox" aria-label="指令建議"></div>
-    </div>
-
-    <!-- 訊息右鍵/長按互動選單 -->
-    <div id="message-context-menu" class="hidden">
-        <div class="menu-item" id="menu-reply" data-i18n="menu_reply">↩️ 回覆訊息</div>
-        <div class="menu-item" id="menu-copy" data-i18n="menu_copy">📋 複製文字</div>
-        <div class="menu-item" id="menu-thread" data-i18n="menu_thread">🧵 開啟討論串</div>
-    </div>
-
-    <div id="sw-update-banner" class="sw-update-banner hidden">
-        <span data-i18n="sw_update_message">已偵測到新版本，是否重新整理？</span>
-        <button id="sw-update-btn" data-i18n="sw_update_button">立即更新</button>
-    </div>
+    <div id="chat-room-mount"></div>
 
     <!-- 引入 Socket.io 客戶端套件 -->
     <script src="/socket.io/socket.io.js"></script>
@@ -376,7 +310,22 @@
     <script src="js/clipboard.js"></script>
     <script src="js/admin-key-banner.js"></script>
     <script src="js/thread-ui.js"></script>
+    <script>
+        (function () {
+            const mount = document.getElementById('chat-room-mount');
+            if (!mount) return;
+            const xhr = new XMLHttpRequest();
+            xhr.open('GET', 'chat/chat-fragment.html', false);
+            xhr.send(null);
+            if (xhr.status >= 200 && xhr.status < 300) {
+                mount.outerHTML = xhr.responseText;
+            } else {
+                mount.innerHTML = '<div class="chat-container hidden">聊天室載入失敗</div>';
+            }
+        }());
+    </script>
     <script src="script.js"></script>
+    <script src="chat/chat-room.js"></script>
     <script src="js/sw-update.js"></script>
     
 </body>

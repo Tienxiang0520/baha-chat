@@ -1176,6 +1176,36 @@ body {
     box-shadow: 0 8px 20px rgba(15, 23, 42, 0.2);
 }
 
+.app-version-badge {
+    position: fixed;
+    right: 18px;
+    bottom: 18px;
+    z-index: 1200;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(99, 102, 241, 0.24);
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.14);
+    backdrop-filter: blur(14px);
+    color: var(--text-main);
+    font-size: 0.82rem;
+}
+
+.app-version-badge__label {
+    color: var(--text-muted);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.app-version-badge strong {
+    font-family: "Cascadia Code", Consolas, monospace;
+    color: var(--accent-strong);
+    font-weight: 700;
+}
+
 /*
  * 聊天視圖高度／欄位整理
  */
@@ -1418,18 +1448,22 @@ body {
     overflow-y: auto;
     display: flex;
     flex-direction: column;
+    align-items: flex-start;
     gap: 10px;
     width: 100%;
 }
 
 #messages li {
+    display: inline-block;
     padding: 6px 14px;
     background: #ffffff;
     border-radius: 12px;
-    width: 100%;
-    max-width: 720px;
-    align-self: flex-start;
+    width: auto;
+    max-width: min(72%, 680px);
+    box-sizing: border-box;
     word-wrap: break-word;
+    word-break: break-word;
+    overflow-wrap: break-word;
     line-height: 1.2;
     white-space: pre-wrap;
     box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
@@ -1487,7 +1521,8 @@ body {
 
 /* 系統提示訊息 */
 #messages li.system-message {
-    align-self: center;
+    margin-left: auto;
+    margin-right: auto;
     background-color: transparent;
     color: var(--text-muted);
     font-size: 0.85rem;
@@ -1937,14 +1972,22 @@ body {
 
 /* 用於顯示自己的訊息 */
 #messages li.my-message {
-    align-self: flex-end;
-    width: 100%;
-    max-width: 720px;
+    display: inline-block;
+    align-self: flex-end !important;
+    width: auto;
+    max-width: min(72%, 680px);
+    margin-left: auto !important;
+    margin-right: 0 !important;
     background: linear-gradient(135deg, #9a82ff, #6c5ce7);
     color: white;
     border-radius: 12px;
     box-shadow: 0 16px 32px rgba(108, 92, 231, 0.35);
     border: 1px solid rgba(255, 255, 255, 0.6);
+}
+
+#messages li:not(.my-message):not(.system-message) {
+    align-self: flex-start !important;
+    margin-right: auto !important;
 }
 
 /* 讓自己訊息中的標題底線配合藍色背景 */

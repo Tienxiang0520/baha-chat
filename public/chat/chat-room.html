@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Baha-chat 聊天室</title>
+    <meta name="description" content="Baha-chat 獨立聊天室頁，專注房間切換、即時訊息與討論串。">
+    <link rel="stylesheet" href="./chat-room-page.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css">
+    <script>
+        window.BAHA_CHAT_SERVER_ORIGIN = window.location.protocol === 'file:' ? 'http://localhost:3000' : window.location.origin;
+    </script>
+    <script>
+        document.write('<script src="' + window.BAHA_CHAT_SERVER_ORIGIN + '/socket.io/socket.io.js"><\/script>');
+    </script>
+    <script src="../i18n.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/markdown-it@13.0.1/dist/markdown-it.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/markdown-it-anchor/dist/markdown-it-anchor.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/markdown-it-emoji/dist/markdown-it-emoji.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/markdown-it-abbr/dist/markdown-it-abbr.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/markdown-it-footnote/dist/markdown-it-footnote.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/markdown-it-task-lists/dist/markdown-it-task-lists.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/markdown-it-container/dist/markdown-it-container.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/markdown-it-mark/dist/markdown-it-mark.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/markdown-it-ins/dist/markdown-it-ins.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/markdown-it-video/dist/markdown-it-video.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/markdown-it-sub/dist/markdown-it-sub.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/markdown-it-sup/dist/markdown-it-sup.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/markdown-it-multimd-table/dist/markdown-it-multimd-table.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/markdown-it-highlightjs/dist/markdown-it-highlightjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@2.4.0/dist/purify.min.js"></script>
+    <script src="./chat-room-page.js" defer></script>
+</head>
+<body>
+    <div class="chat-page">
+        <aside class="sidebar page-card">
+            <div class="brand-block">
+                <h1>Baha-chat</h1>
+                <p>獨立聊天室頁。現在這一頁不再依賴大廳 DOM，可以單獨開發、單獨排查畫面問題。</p>
+            </div>
+
+            <div id="runtime-hint" class="helper-note"></div>
+
+            <section class="sidebar-section">
+                <h2>建立房間</h2>
+                <p>直接輸入房名，或用 <code>/lock 密碼 房名</code> 建立鎖房。</p>
+                <div class="sidebar-form">
+                    <input id="create-room-input" class="sidebar-input" type="text" placeholder="建立新房間">
+                    <button id="create-room-btn" class="primary-btn" type="button">立即建立</button>
+                </div>
+            </section>
+
+            <section class="sidebar-section">
+                <h2>搜尋房間</h2>
+                <p>支援 <code>/hot</code> 排熱門。</p>
+                <div class="search-box">
+                    <input id="room-search-input" class="sidebar-input" type="text" placeholder="搜尋房間 /hot">
+                </div>
+            </section>
+
+            <section class="sidebar-section" style="min-height: 0; flex: 1;">
+                <h2>房間列表</h2>
+                <ul id="room-list" class="room-list"></ul>
+                <div id="room-empty" class="helper-note hidden">目前沒有符合的房間。</div>
+            </section>
+        </aside>
+
+        <main class="chat-stage page-card">
+            <header class="chat-header">
+                <a id="back-link" class="back-link chip-btn" href="/">⬅ 返回大廳</a>
+                <div class="chat-heading">
+                    <h2 id="room-title">話題標題</h2>
+                    <p id="room-subtitle">從左側挑一個房間開始。</p>
+                </div>
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <span id="connection-dot" class="status-dot"></span>
+                    <span id="connection-label">已連線</span>
+                </div>
+            </header>
+
+            <div id="connection-banner" class="connection-banner hidden">與伺服器連線中斷，重新連上後會自動恢復房間列表。</div>
+
+            <div id="thread-banner" class="chat-banner hidden">
+                <span data-i18n="thread_parent_label">此為子討論串，原房：</span>
+                <strong id="thread-parent-name"></strong>
+                <button id="thread-back-btn" class="ghost-btn" type="button" data-i18n="thread_back">返回主頻道</button>
+            </div>
+
+            <div id="admin-token-banner" class="admin-banner hidden" role="status" aria-live="polite">
+                <span>管理金鑰</span>
+                <code id="admin-token-text"></code>
+                <button id="admin-token-copy" class="ghost-btn" type="button">複製</button>
+                <button id="admin-token-close" class="ghost-btn" type="button">收起</button>
+            </div>
+
+            <div class="chat-viewport">
+                <div id="room-empty-state" class="room-empty-state">
+                    <div>
+                        <strong>還沒進房間</strong>
+                        <p>可以從左側房間列表加入，或先建立新房間。</p>
+                    </div>
+                </div>
+                <ul id="messages"></ul>
+            </div>
+
+            <div id="typing-indicator" class="typing-indicator hidden"></div>
+
+            <div id="reply-preview" class="reply-preview hidden">
+                <span data-i18n="reply_to_prefix">↩️ 回覆</span>
+                <strong id="reply-preview-user"></strong>
+                <span id="reply-preview-text"></span>
+                <button id="cancel-reply-btn" class="ghost-btn" type="button">取消</button>
+            </div>
+
+            <section class="composer">
+                <div class="composer-toolbar">
+                    <button id="markdown-toggle-btn" class="ghost-btn" type="button">Markdown ON</button>
+                    <div id="markdown-status" class="composer-status">Markdown 已開啟</div>
+                    <div id="chat-status" class="composer-status">尚未加入房間</div>
+                </div>
+
+                <form id="chat-form" class="composer-form">
+                    <textarea id="chat-input" autocomplete="off" placeholder="輸入匿名訊息..." data-i18n-placeholder="chat_placeholder"></textarea>
+                    <button class="primary-btn send-btn" type="submit" data-i18n="send">發送</button>
+                </form>
+            </section>
+        </main>
+    </div>
+
+    <div id="message-context-menu" class="context-menu hidden">
+        <button id="menu-reply" type="button" data-i18n="menu_reply">↩️ 回覆訊息</button>
+        <button id="menu-copy" type="button" data-i18n="menu_copy">📋 複製文字</button>
+        <button id="menu-thread" type="button" data-i18n="menu_thread">🧵 開啟討論串</button>
+    </div>
+</body>
+</html>

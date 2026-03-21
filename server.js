@@ -63,6 +63,7 @@ connectDB();
 // 2. 載入資料庫模型 (Models)
 const Room = require('./models/Room');
 const Announcement = require('./models/Announcement');
+const { version: appVersion } = require('./package.json');
 
 // 3. 確保預設的「綜合閒聊」大廳永遠存在
 Room.findOne({ name: '綜合閒聊' }).then(room => {
@@ -73,6 +74,14 @@ Room.findOne({ name: '綜合閒聊' }).then(room => {
 
 // 設定靜態檔案資料夾，讓 Express 可以提供 HTML, CSS, JS 檔案
 app.use(express.static('public'));
+
+app.get('/meta/version', (req, res) => {
+    res.json({
+        name: 'baha',
+        version: appVersion,
+        timestamp: Date.now()
+    });
+});
 
 // 輕量級網頁摘要抓取函式 (抓取 Open Graph 標籤)
 async function fetchLinkPreview(text) {

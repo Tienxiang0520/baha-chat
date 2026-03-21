@@ -1,0 +1,79 @@
+<!-- 聊天室畫面：進入特定話題後顯示，預設隱藏 -->
+<div id="chat-view" class="chat-container hidden">
+    <header class="chat-header">
+        <button id="back-btn" class="header-btn" data-i18n="back_to_lobby">⬅ 返回大廳</button>
+        <h1 id="room-title" data-i18n="room_title_default">話題標題</h1>
+    </header>
+    <div class="chat-grid">
+        <aside class="chat-room-column">
+            <div class="chat-room-column-inner">
+                <div class="chat-room-column-header">
+                    <div>
+                        <h2>房間列表</h2>
+                        <p>桌面先覽 &nbsp;• &nbsp;點選即可切換</p>
+                    </div>
+                </div>
+                <ul id="chat-room-list" class="chat-room-list"></ul>
+            </div>
+        </aside>
+        <div class="chat-main">
+            <div id="thread-banner" class="thread-banner hidden">
+                <span data-i18n="thread_parent_label">此為子討論串，原房：</span>
+                <span id="thread-parent-name"></span>
+                <button id="thread-back-btn" type="button" data-i18n="thread_back">返回主頻道</button>
+            </div>
+            <div id="admin-key-banner" class="admin-key-banner hidden" role="status" aria-live="polite">
+                <span id="admin-key-label">管理金鑰：</span>
+                <span id="admin-key-text"></span>
+                <button id="admin-key-copy" type="button" class="admin-key-copy">複製</button>
+                <button id="admin-key-close" type="button" class="admin-key-close" aria-label="關閉">✖</button>
+            </div>
+            <div id="danmaku-container"></div>
+            <ul id="messages"></ul>
+        </div>
+        <aside class="chat-side side-panel" data-panel-id="chat">
+            <div class="side-panel-header">
+                <div>
+                    <h2>聊天室小幫手</h2>
+                    <p>為桌機使用者整理熱點指令、公告與快捷入口。</p>
+                </div>
+                <button class="side-panel-add-btn" type="button">+ 新增卡片</button>
+            </div>
+            <div class="side-card-list"></div>
+            <form class="side-panel-form hidden" data-panel-id="chat">
+                <input name="title" placeholder="卡片標題" required />
+                <textarea name="content" rows="3" placeholder="卡片內容 / 支援 Markdown 語法" required></textarea>
+                <div class="side-panel-form-actions">
+                    <button type="submit">新增</button>
+                    <button type="button" class="side-panel-form-cancel">取消</button>
+                </div>
+            </form>
+        </aside>
+    </div>
+
+    <div id="reply-preview" class="hidden">
+        <div class="reply-content">
+            <span data-i18n="reply_to_prefix">↩️ 回覆</span> <span id="reply-preview-user"></span>：<span id="reply-preview-text"></span>
+        </div>
+        <button id="cancel-reply-btn" type="button">✖</button>
+    </div>
+
+    <div id="typing-indicator" class="typing-indicator hidden"></div>
+    <form id="form" action="">
+        <textarea id="input" autocomplete="off" placeholder="輸入匿名訊息..." data-i18n-placeholder="chat_placeholder" required></textarea>
+        <button type="submit" data-i18n="send">發送</button>
+    </form>
+    <div id="command-suggestions" class="command-suggestions hidden" role="listbox" aria-label="指令建議"></div>
+</div>
+
+<!-- 訊息右鍵/長按互動選單 -->
+<div id="message-context-menu" class="hidden">
+    <div class="menu-item" id="menu-reply" data-i18n="menu_reply">↩️ 回覆訊息</div>
+    <div class="menu-item" id="menu-copy" data-i18n="menu_copy">📋 複製文字</div>
+    <div class="menu-item" id="menu-thread" data-i18n="menu_thread">🧵 開啟討論串</div>
+</div>
+
+<div id="sw-update-banner" class="sw-update-banner hidden">
+    <span data-i18n="sw_update_message">已偵測到新版本，是否重新整理？</span>
+    <button id="sw-update-btn" data-i18n="sw_update_button">立即更新</button>
+</div>
