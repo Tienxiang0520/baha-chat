@@ -15,6 +15,8 @@ const error = (...args) => console.error(`[${new Date().toLocaleTimeString()}] �
 const express = require('express');
 const http = require('http');
 const os = require('os');
+const fs = require('fs');
+const path = require('path');
 const { Server } = require('socket.io');
 const mongoose = require('mongoose');
 const nodemailer = require('nodemailer');
@@ -74,6 +76,14 @@ Room.findOne({ name: '綜合閒聊' }).then(room => {
 
 // 設定靜態檔案資料夾，讓 Express 可以提供 HTML, CSS, JS 檔案
 app.use(express.static('public'));
+
+const reactChatDistPath = path.join(__dirname, 'frontend', 'chat-app', 'dist');
+if (fs.existsSync(reactChatDistPath)) {
+    app.use('/react-chat', express.static(reactChatDistPath));
+    app.get(/^\/react-chat(?:\/.*)?$/, (req, res) => {
+        res.sendFile(path.join(reactChatDistPath, 'index.html'));
+    });
+}
 
 app.get('/meta/version', (req, res) => {
     res.json({

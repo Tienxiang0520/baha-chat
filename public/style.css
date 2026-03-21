@@ -2091,6 +2091,7 @@ body {
 
 .feature-menu-btn {
     width: 100%;
+    display: block;
     padding: 15px;
     font-size: 1.1rem;
     font-weight: bold;
@@ -2101,6 +2102,7 @@ body {
     cursor: pointer;
     transition: transform 0.2s, box-shadow 0.2s;
     text-align: left;
+    text-decoration: none;
     margin-bottom: 12px;
     box-shadow: 0 18px 30px rgba(2, 4, 28, 0.4);
 }

@@ -10,7 +10,7 @@ function joinThreadRoom(roomName, parentRoomName = null) {
 
 function buildStandaloneChatRoomUrl(roomName) {
     const baseOrigin = window.location.origin || 'http://localhost:3000';
-    const url = new URL('/chat/chat-room.html', baseOrigin);
+    const url = new URL('/react-chat/', baseOrigin);
     if (roomName) {
         url.searchParams.set('room', roomName);
     }

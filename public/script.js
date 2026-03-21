@@ -21,6 +21,8 @@ function getOrCreateUserId() {
 }
 
 const localUserId = getOrCreateUserId();
+const initialUrlParams = new URLSearchParams(window.location.search);
+let pendingRoomFromUrl = initialUrlParams.get('room') || '';
 // 初始化 Socket.io 連線
 const socket = io({ auth: { userId: localUserId } });
 
@@ -65,6 +67,7 @@ const backFromAnnouncementBtn = document.getElementById('back-from-announcement-
 const featuresDot = document.getElementById('features-dot');
 const announcementDot = document.getElementById('announcement-dot');
 const sponsorBtn = document.getElementById('sponsor-btn');
+const reactChatLink = document.getElementById('react-chat-link');
 const reduceMotionBtn = document.getElementById('reduce-motion-btn');
 const desktopNotificationsBtn = document.getElementById('desktop-notifications-btn');
 const sponsorView = document.getElementById('sponsor-view');
@@ -144,6 +147,26 @@ let selectedMessageMid = null;
 let activeThreadParent = null;
 let activeThreadTitle = '';
 let serverStatusRefreshTimer = null;
+
+function syncRoomQueryParam(roomName = '') {
+    const url = new URL(window.location.href);
+    if (roomName) {
+        url.searchParams.set('room', roomName);
+    } else {
+        url.searchParams.delete('room');
+    }
+    window.history.replaceState(null, '', url.toString());
+}
+
+function updateReactChatLinkTarget() {
+    if (!reactChatLink) return;
+    const targetRoom = activeThreadParent || currentRoom || '綜合閒聊';
+    const url = new URL('/react-chat/', window.location.origin || 'http://localhost:3000');
+    url.searchParams.set('room', targetRoom);
+    reactChatLink.href = url.toString();
+}
+
+updateReactChatLinkTarget();
 
 function showFeaturesView() {
     lobbyView.classList.add('hidden');
@@ -1684,6 +1707,8 @@ backBtn.addEventListener('click', () => {
     activeThreadTitle = '';
     window.ThreadUI?.hide();
     window.AdminKeyBanner?.hide();
+    syncRoomQueryParam('');
+    updateReactChatLinkTarget();
 });
 
 /**
@@ -1721,6 +1746,8 @@ socket.on('join success', (roomInfo) => {
     const roomName = roomInfo?.name;
     const displayName = roomInfo?.displayName || roomName || '';
     currentRoom = roomName || '';
+    pendingRoomFromUrl = '';
+    syncRoomQueryParam(currentRoom);
     const isThread = !!roomInfo?.isThread;
     if (isThread) {
         activeThreadParent = roomInfo.parentRoom || activeThreadParent;
@@ -1732,6 +1759,7 @@ socket.on('join success', (roomInfo) => {
         roomTitle.textContent = displayName;
     }
     window.ThreadUI?.update(activeThreadParent, getRoomDisplayName(activeThreadParent), activeThreadTitle);
+    updateReactChatLinkTarget();
     
     // 切換視圖到聊天室
     lobbyView.classList.add('hidden');
@@ -1745,7 +1773,10 @@ socket.on('join success', (roomInfo) => {
 
 // 監聽加入房間失敗 (密碼錯誤)
 socket.on('join error', (errorKey) => {
+    pendingRoomFromUrl = '';
+    syncRoomQueryParam('');
     alert(t[errorKey] || '加入房間失敗！');
+    updateReactChatLinkTarget();
 });
 
 // 監聽搜尋框的輸入事件
@@ -1817,6 +1848,7 @@ socket.on('room deleted', (payload) => {
     if (!payload || payload.room !== currentRoom) return;
     addSystemMessage(t.room_deleted || '⚠️ 房間已被刪除，返回大廳。');
     backBtn.click();
+    updateReactChatLinkTarget();
 });
 
 socket.on('room renamed', (payload) => {
@@ -1955,6 +1987,9 @@ socket.on('chat message updated', (data) => {
 // 監聽 Socket.io 連線成功事件 (隱藏載入畫面)
 socket.on('connect', () => {
     loadingOverlay.classList.add('hidden');
+    if (pendingRoomFromUrl && !currentRoom) {
+        socket.emit('join room', { name: pendingRoomFromUrl });
+    }
     // 若沒有在聊天室內，確保白板顯示在前景
     if (!currentRoom && desktopBoard) {
         desktopBoard.classList.remove('hidden');
@@ -1975,6 +2010,7 @@ socket.on('kicked', ({room}) => {
     if (room && currentRoom === room) {
         addSystemMessage(`⚠️ 你已被踢出 ${room}`); // option use translations?
         backBtn.click();
+        updateReactChatLinkTarget();
     }
 });
 

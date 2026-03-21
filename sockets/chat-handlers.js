@@ -75,6 +75,20 @@ function registerChatHandlers(socket, io, fetchLinkPreview, handleCommand) {
         const updatedPoll = votePoll(pollId, socket.userId, optionIndex);
         if (!updatedPoll) return;
 
+        Message.updateOne(
+            { 'poll.id': updatedPoll.id },
+            {
+                $set: {
+                    'poll.options': updatedPoll.options.map(option => ({
+                        text: option.text,
+                        count: option.count
+                    }))
+                }
+            }
+        ).catch((error) => {
+            console.error('更新投票歷史紀錄失敗:', error);
+        });
+
         socket.server.to(poll.room).emit('poll update', {
             pollId: updatedPoll.id,
             options: updatedPoll.options.map(option => ({ text: option.text, count: option.count }))

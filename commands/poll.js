@@ -1,4 +1,5 @@
 const { createPoll } = require('../polls');
+const Message = require('../models/Message');
 
 module.exports = {
     name: 'poll',
@@ -31,12 +32,32 @@ module.exports = {
             id: 'System',
             text: `📊 投票：${question}`,
             timestamp: Date.now(),
+            useMarkdown: false,
             poll: {
                 id: poll.id,
                 question: poll.question,
                 options: poll.options.map(option => ({ text: option.text, count: option.count }))
             }
         };
-        socket.server.to(room).emit('chat message', messageData);
+
+        try {
+            const messageRecord = await Message.create({
+                roomName: room,
+                ...messageData
+            });
+
+            socket.server.to(room).emit('chat message', {
+                ...messageData,
+                mid: messageRecord._id.toString()
+            });
+        } catch (error) {
+            console.error('儲存投票訊息失敗:', error);
+            socket.emit('chat message', {
+                id: 'System',
+                text: '❌ 投票建立成功，但儲存歷史紀錄失敗。',
+                timestamp: Date.now()
+            });
+            socket.server.to(room).emit('chat message', messageData);
+        }
     }
 };
