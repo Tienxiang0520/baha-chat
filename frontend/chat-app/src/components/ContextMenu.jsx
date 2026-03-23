@@ -1,9 +1,12 @@
 export default function ContextMenu({
+  isMobile,
   menu,
   onClose,
   onCopy,
+  onKick,
   onReply,
-  onThread
+  onThread,
+  showKick
 }) {
   if (!menu?.open || !menu.message) return null;
 
@@ -16,12 +19,13 @@ export default function ContextMenu({
         onClick={onClose}
       />
       <div
-        className="context-menu"
-        style={{
+        className={`context-menu${isMobile ? ' context-menu--mobile' : ''}`}
+        style={isMobile ? undefined : {
           left: `${menu.x}px`,
           top: `${menu.y}px`
         }}
       >
+        {isMobile && <div className="context-menu__handle" />}
         <button type="button" onClick={onReply}>
           ↩️ 回覆訊息
         </button>
@@ -31,6 +35,11 @@ export default function ContextMenu({
         <button type="button" onClick={onThread}>
           🧵 開啟討論串
         </button>
+        {showKick && (
+          <button className="context-menu__danger" type="button" onClick={onKick}>
+            🚫 踢出 {menu.message.displayName || menu.message.id}
+          </button>
+        )}
       </div>
     </>
   );

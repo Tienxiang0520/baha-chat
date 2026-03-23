@@ -50,26 +50,6 @@ export const COMMAND_SUGGESTIONS = [
     description: '暫時禁言使用者'
   },
   {
-    name: '/adminkey',
-    template: '/adminkey',
-    description: '重新顯示管理金鑰'
-  },
-  {
-    name: '/auth',
-    template: '/auth 管理金鑰',
-    description: '用金鑰恢復房主管理權'
-  },
-  {
-    name: '/login',
-    template: '/login 密碼',
-    description: '登入管理模式'
-  },
-  {
-    name: '/logout',
-    template: '/logout',
-    description: '登出管理模式'
-  },
-  {
     name: '/canvas',
     template: '/canvas',
     description: '分享白板連結'

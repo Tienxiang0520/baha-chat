@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const Room = require('./models/Room');
 
 // 使用 Map 來儲存指令，方便快速查找
 const commands = new Map();
@@ -48,10 +49,21 @@ async function handleCommand(socket, data) {
     if (!command) return false;
 
     const roomName = data?.room;
-    const hasRoomAdmin = roomName && socket.adminRooms?.has(roomName);
-    if (command.adminOnly && !socket.isAdmin && !hasRoomAdmin) {
-        socket.emit('chat message', { id: 'System', text: '❌ 您沒有管理員權限！請先登入。', timestamp: Date.now() });
-        return true;
+    if (command.adminOnly) {
+        if (!roomName) {
+            socket.emit('chat message', { id: 'System', text: '❌ 這個指令只能在房間內由房主使用。', timestamp: Date.now() });
+            return true;
+        }
+
+        const room = await Room.findOne({ name: roomName }).select('creatorId');
+        if (!room || room.creatorId !== socket.userId) {
+            socket.emit('chat message', {
+                id: 'System',
+                text: '❌ 只有這個房間的建立者才能使用此管理指令。',
+                timestamp: Date.now()
+            });
+            return true;
+        }
     }
 
     try {

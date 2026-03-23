@@ -29,10 +29,6 @@ const socket = io({ auth: { userId: localUserId } });
 const loadingOverlay = document.getElementById('loading-overlay');
 const lobbyView = document.getElementById('lobby-view');
 const chatView = document.getElementById('chat-view');
-const featuresView = document.getElementById('features-view');
-const tutorialView = document.getElementById('tutorial-view');
-const announcementView = document.getElementById('announcement-view');
-const announcementList = document.getElementById('announcement-list');
 const roomList = document.getElementById('room-list');
 const chatRoomList = document.getElementById('chat-room-list');
 const roomInput = document.getElementById('room-input');
@@ -48,32 +44,8 @@ let boardRoomListNextButton = null;
 let roomListRenderScheduled = false;
 const backBtn = document.getElementById('back-btn');
 const featuresBtn = document.getElementById('features-btn');
-const backFromFeaturesBtn = document.getElementById('back-from-features-btn');
 const boardFeaturesBtn = document.getElementById('board-features-btn');
-const tutorialBtn = document.getElementById('tutorial-btn');
-const backFromTutorialBtn = document.getElementById('back-from-tutorial-btn');
-const embedTutorialBtn = document.getElementById('embed-tutorial-btn');
-const backFromEmbedTutorialBtn = document.getElementById('back-from-embed-tutorial-btn');
-const embedTutorialView = document.getElementById('embed-tutorial-view');
-const serverStatusBtn = document.getElementById('server-status-btn');
-const serverStatusView = document.getElementById('server-status-view');
-const backFromServerStatusBtn = document.getElementById('back-from-server-status-btn');
-const serverStatusLoading = document.getElementById('server-status-loading');
-const serverStatusGrid = document.getElementById('server-status-grid');
-const serverStatusUpdated = document.getElementById('server-status-updated');
-const serverStatusRefreshBtn = document.getElementById('server-status-refresh-btn');
-const announcementBtn = document.getElementById('announcement-btn');
-const backFromAnnouncementBtn = document.getElementById('back-from-announcement-btn');
 const featuresDot = document.getElementById('features-dot');
-const announcementDot = document.getElementById('announcement-dot');
-const sponsorBtn = document.getElementById('sponsor-btn');
-const reactChatLink = document.getElementById('react-chat-link');
-const reduceMotionBtn = document.getElementById('reduce-motion-btn');
-const desktopNotificationsBtn = document.getElementById('desktop-notifications-btn');
-const sponsorView = document.getElementById('sponsor-view');
-const backFromSponsorBtn = document.getElementById('back-from-sponsor-btn');
-const sponsorCopyEmailBtn = document.getElementById('sponsor-copy-email');
-const sponsorEmailValue = document.getElementById('sponsor-email-value');
 const roomTitle = document.getElementById('room-title');
 const appVersionBadge = document.getElementById('app-version-badge');
 const appVersionText = document.getElementById('app-version-text');
@@ -146,7 +118,6 @@ let replyingTo = null; // 紀錄目前正在回覆的訊息資料
 let selectedMessageMid = null;
 let activeThreadParent = null;
 let activeThreadTitle = '';
-let serverStatusRefreshTimer = null;
 
 function syncRoomQueryParam(roomName = '') {
     const url = new URL(window.location.href);
@@ -158,75 +129,9 @@ function syncRoomQueryParam(roomName = '') {
     window.history.replaceState(null, '', url.toString());
 }
 
-function updateReactChatLinkTarget() {
-    if (!reactChatLink) return;
-    const targetRoom = activeThreadParent || currentRoom || '綜合閒聊';
-    const url = new URL('/react-chat/', window.location.origin || 'http://localhost:3000');
-    url.searchParams.set('room', targetRoom);
-    reactChatLink.href = url.toString();
-}
-
-updateReactChatLinkTarget();
-
 function showFeaturesView() {
-    lobbyView.classList.add('hidden');
-    chatView.classList.add('hidden');
-    serverStatusView?.classList.add('hidden');
-    stopServerStatusAutoRefresh();
-    if (desktopBoard) {
-        desktopBoard.classList.add('hidden');
-    }
-    featuresView.classList.remove('hidden');
-    featuresDot.classList.add('hidden');
-}
-
-function restoreMainWorkspace() {
-    featuresView.classList.add('hidden');
-    serverStatusView?.classList.add('hidden');
-    if (currentRoom) {
-        chatView.classList.remove('hidden');
-        return;
-    }
-    if (isDesktopBoardActive() && desktopBoard) {
-        desktopBoard.classList.remove('hidden');
-    } else {
-        lobbyView.classList.remove('hidden');
-    }
-}
-
-function formatBytes(bytes) {
-    if (!Number.isFinite(bytes)) return 'N/A';
-    const units = ['B', 'KB', 'MB', 'GB'];
-    let value = bytes;
-    let unitIndex = 0;
-    while (value >= 1024 && unitIndex < units.length - 1) {
-        value /= 1024;
-        unitIndex += 1;
-    }
-    return `${value.toFixed(value >= 10 || unitIndex === 0 ? 0 : 1)} ${units[unitIndex]}`;
-}
-
-function formatNumber(value, digits = 2) {
-    return Number.isFinite(value) ? value.toFixed(digits) : 'N/A';
-}
-
-function formatDuration(seconds) {
-    if (!Number.isFinite(seconds) || seconds < 0) return 'N/A';
-    const days = Math.floor(seconds / 86400);
-    const hours = Math.floor((seconds % 86400) / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const secs = seconds % 60;
-    if (days > 0) return `${days} 天 ${hours} 小時`;
-    if (hours > 0) return `${hours} 小時 ${minutes} 分`;
-    if (minutes > 0) return `${minutes} 分 ${secs} 秒`;
-    return `${secs} 秒`;
-}
-
-function stopServerStatusAutoRefresh() {
-    if (serverStatusRefreshTimer) {
-        clearInterval(serverStatusRefreshTimer);
-        serverStatusRefreshTimer = null;
-    }
+    featuresDot?.classList.add('hidden');
+    window.location.assign('/react-features/');
 }
 
 async function loadAppVersion() {
@@ -243,69 +148,6 @@ async function loadAppVersion() {
     }
 }
 
-function renderServerStatusCard(title, value, description = '') {
-    const card = document.createElement('article');
-    card.className = 'server-status-card';
-
-    const titleEl = document.createElement('h3');
-    titleEl.textContent = title;
-    const valueEl = document.createElement('strong');
-    valueEl.textContent = value;
-    const descEl = document.createElement('p');
-    descEl.textContent = description;
-
-    card.appendChild(titleEl);
-    card.appendChild(valueEl);
-    if (description) {
-        card.appendChild(descEl);
-    }
-    return card;
-}
-
-function renderServerStatus(status) {
-    if (!serverStatusGrid || !serverStatusLoading || !serverStatusUpdated) return;
-    serverStatusLoading.classList.add('hidden');
-    serverStatusGrid.classList.remove('hidden');
-    serverStatusGrid.innerHTML = '';
-
-    const loadAverage = Array.isArray(status.loadAverage) ? status.loadAverage : [0, 0, 0];
-    const memoryUsage = status.memoryUsage || {};
-
-    serverStatusGrid.appendChild(renderServerStatusCard('在線人數', String(status.connectedUsers ?? 0), '目前 socket 連線數'));
-    serverStatusGrid.appendChild(renderServerStatusCard('房間數', String(status.roomCount ?? 0), '資料庫中的房間總數'));
-    serverStatusGrid.appendChild(renderServerStatusCard('公告數', String(status.announcementCount ?? 0), '系統公告數量'));
-    serverStatusGrid.appendChild(renderServerStatusCard('伺服器負載', `${formatNumber(loadAverage[0])} / ${formatNumber(loadAverage[1])} / ${formatNumber(loadAverage[2])}`, '1 / 5 / 15 分鐘平均'));
-    serverStatusGrid.appendChild(renderServerStatusCard('記憶體使用', `${formatBytes(memoryUsage.rss)} RSS`, `Heap ${formatBytes(memoryUsage.heapUsed)} / ${formatBytes(memoryUsage.heapTotal)}`));
-    serverStatusGrid.appendChild(renderServerStatusCard('執行時間', formatDuration(status.uptimeSeconds), `${status.nodeVersion || 'Node.js'} · ${status.platform || ''} ${status.arch || ''}`.trim()));
-    serverStatusGrid.appendChild(renderServerStatusCard('主機資訊', `${status.hostname || 'N/A'} / PID ${status.pid ?? 'N/A'}`, new Date(status.timestamp || Date.now()).toLocaleString()));
-
-    serverStatusUpdated.textContent = `最後更新：${new Date(status.timestamp || Date.now()).toLocaleString()}`;
-}
-
-function loadServerStatus() {
-    if (!serverStatusLoading || !serverStatusGrid) return;
-    serverStatusLoading.classList.remove('hidden');
-    serverStatusLoading.textContent = '讀取中...';
-    serverStatusGrid.classList.add('hidden');
-
-    socket.emit('request server status', (status) => {
-        if (!status || status.error) {
-            serverStatusLoading.textContent = status?.error || '無法取得伺服器狀態';
-            return;
-        }
-        if (serverStatusView?.classList.contains('hidden')) return;
-        renderServerStatus(status);
-    });
-}
-
-function showServerStatusView() {
-    featuresView.classList.add('hidden');
-    serverStatusView?.classList.remove('hidden');
-    loadServerStatus();
-    stopServerStatusAutoRefresh();
-    serverStatusRefreshTimer = setInterval(loadServerStatus, 5000);
-}
-
 // ===== 畫面切換邏輯 =====
 featuresBtn.addEventListener('click', () => {
     showFeaturesView();
@@ -316,88 +158,6 @@ if (boardFeaturesBtn) {
         showFeaturesView();
     });
 }
-
-if (reduceMotionBtn) {
-    reduceMotionBtn.addEventListener('click', () => {
-        applyReduceMotionPreference(!reduceMotionEnabled);
-    });
-}
-
-if (desktopNotificationsBtn) {
-    desktopNotificationsBtn.addEventListener('click', () => {
-        if (notificationsEnabled) {
-            notificationsEnabled = false;
-            localStorage.setItem(NOTIFICATION_STORAGE_KEY, 'false');
-            updateNotificationsButton();
-        } else {
-            requestDesktopNotifications();
-        }
-    });
-}
-
-backFromFeaturesBtn.addEventListener('click', () => {
-    restoreMainWorkspace();
-});
-
-tutorialBtn.addEventListener('click', () => {
-    featuresView.classList.add('hidden');
-    tutorialView.classList.remove('hidden');
-});
-
-backFromTutorialBtn.addEventListener('click', () => {
-    tutorialView.classList.add('hidden');
-    featuresView.classList.remove('hidden');
-});
-
-if (embedTutorialBtn && backFromEmbedTutorialBtn && embedTutorialView) {
-    embedTutorialBtn.addEventListener('click', () => {
-        featuresView.classList.add('hidden');
-        embedTutorialView.classList.remove('hidden');
-    });
-
-    backFromEmbedTutorialBtn.addEventListener('click', () => {
-        embedTutorialView.classList.add('hidden');
-        featuresView.classList.remove('hidden');
-    });
-}
-
-if (serverStatusBtn && backFromServerStatusBtn && serverStatusView) {
-    serverStatusBtn.addEventListener('click', () => {
-        showServerStatusView();
-    });
-
-    backFromServerStatusBtn.addEventListener('click', () => {
-        stopServerStatusAutoRefresh();
-        serverStatusView.classList.add('hidden');
-        featuresView.classList.remove('hidden');
-    });
-
-    serverStatusRefreshBtn?.addEventListener('click', () => {
-        loadServerStatus();
-    });
-}
-
-announcementBtn.addEventListener('click', () => {
-    featuresView.classList.add('hidden');
-    announcementView.classList.remove('hidden');
-    announcementDot.classList.add('hidden'); // 點開公告列表時消除紅點
-});
-
-sponsorBtn.addEventListener('click', () => {
-    featuresView.classList.add('hidden');
-    sponsorView.classList.remove('hidden');
-    featuresDot.classList.add('hidden');
-});
-
-backFromSponsorBtn.addEventListener('click', () => {
-    sponsorView.classList.add('hidden');
-    featuresView.classList.remove('hidden');
-});
-
-backFromAnnouncementBtn.addEventListener('click', () => {
-    announcementView.classList.add('hidden');
-    featuresView.classList.remove('hidden');
-});
 
 // ===== 互動選單相關狀態與事件 =====
 let selectedMessageText = '';
@@ -473,20 +233,6 @@ window.ThreadUI?.setBackCallback(() => {
     backBtn.click();
 });
 
-if (sponsorCopyEmailBtn) {
-    sponsorCopyEmailBtn.addEventListener('click', async () => {
-        const email = sponsorEmailValue?.textContent?.trim();
-        if (!email) return;
-
-        try {
-            await copyToClipboard(email);
-            addSystemMessage(t.sponsor_copied || 'Sponsor email copied');
-        } catch (error) {
-            console.error('贊助信箱複製失敗', error);
-        }
-    });
-}
-
 function attemptCreateRoom() {
     const rawName = roomInput?.value || '';
     const name = rawName.trim();
@@ -536,7 +282,6 @@ function applyTranslations() {
 }
 applyTranslations();
 applyReduceMotionPreference(reduceMotionEnabled);
-updateNotificationsButton();
 loadAppVersion();
 
 /**
@@ -684,34 +429,6 @@ function applyReduceMotionPreference(enabled) {
     reduceMotionEnabled = enabled;
     localStorage.setItem(MOTION_STORAGE_KEY, enabled ? 'true' : 'false');
     document.body.classList.toggle('reduce-motion', enabled);
-    if (reduceMotionBtn) {
-        reduceMotionBtn.textContent = enabled ? '減少動態效果 (已啟用)' : '減少動態效果';
-    }
-}
-
-function maybeShowReduceMotionHint() {
-    if (!reduceMotionBtn) return;
-    reduceMotionBtn.textContent = reduceMotionEnabled ? '減少動態效果 (已啟用)' : '減少動態效果';
-}
-
-function updateNotificationsButton() {
-    if (!desktopNotificationsBtn) return;
-    const prefix = notificationsEnabled ? '桌面通知 (已開啟)' : '桌面通知 (關閉中)';
-    desktopNotificationsBtn.textContent = prefix;
-}
-
-function requestDesktopNotifications() {
-    if (!('Notification' in window)) return;
-    Notification.requestPermission().then(permission => {
-        if (permission === 'granted') {
-            notificationsEnabled = true;
-            localStorage.setItem(NOTIFICATION_STORAGE_KEY, 'true');
-        } else {
-            notificationsEnabled = false;
-            localStorage.setItem(NOTIFICATION_STORAGE_KEY, 'false');
-        }
-        updateNotificationsButton();
-    });
 }
 if (commandSuggestions) {
     commandSuggestions.addEventListener('click', (event) => {
@@ -867,23 +584,23 @@ const BOARD_DEFAULT_MODULES = [
     { id: 'board-create-room', type: 'create-room', x: 24, y: 24, width: 280, height: 200, data: { title: '建立房間', subtitle: '快速開啟一個新話題' }, removable: true, resizable: true },
     { id: 'board-search', type: 'search', x: 320, y: 24, width: 280, height: 170, data: { title: '搜尋話題', subtitle: '支援 /hot、/lock 等指令' }, removable: true, resizable: true },
     { id: 'board-rooms', type: 'rooms', x: 616, y: 24, width: 280, height: 240, data: { title: '熱門房間', subtitle: '直接在白板挑選' }, removable: true, resizable: true },
-    { id: 'board-actions', type: 'actions', x: 24, y: 260, width: 360, height: 190, data: { title: '快速指令', subtitle: '常用管理與互動指令' }, removable: true, resizable: true },
+    { id: 'board-actions', type: 'actions', x: 24, y: 260, width: 360, height: 220, data: { title: '建立與搜尋指令', subtitle: '建立房間與搜尋話題' }, removable: true, resizable: true },
     { id: 'board-sponsor', type: 'sponsor', x: 412, y: 260, width: 280, height: 170, data: { title: '支持開發', subtitle: '每份贊助都讓 Baha 更穩定' }, removable: true, resizable: true }
 ];
 const MODULE_MIN_WIDTH = 220;
 const MODULE_MIN_HEIGHT = 160;
 const BOARD_ACTIONS = [
-    { command: '/poll', description: '發起話題投票' },
-    { command: '/canvas', description: '分享白板連結' },
-    { command: '/thread', description: '延伸為討論串' },
-    { command: '/announce', description: '發布系統公告' },
-    { command: '/kick', description: '踢出惡意使用者' }
+    { command: '直接輸入房名', description: '快速建立或加入公開話題' },
+    { command: '/lock 密碼 房名', description: '建立帶密碼的鎖房話題' },
+    { command: '/hot', description: '只看熱門話題' },
+    { command: '/lock', description: '搜尋時只看鎖房' },
+    { command: '/open', description: '搜尋時只看公開房間' }
 ];
 const BOARD_MODULE_TITLES = {
     'create-room': '建立房間',
     'search': '搜尋話題',
     'rooms': '房間列表',
-    'actions': '快速指令',
+    'actions': '建立與搜尋指令',
     'sponsor': '支持開發'
 };
 
@@ -1708,38 +1425,11 @@ backBtn.addEventListener('click', () => {
     window.ThreadUI?.hide();
     window.AdminKeyBanner?.hide();
     syncRoomQueryParam('');
-    updateReactChatLinkTarget();
 });
 
 /**
  * 根據搜尋條件渲染房間列表
  */
-// ===== 系統公告渲染與事件 =====
-function createAnnouncementElement(data) {
-    const item = document.createElement('div');
-    item.className = 'announcement-item';
-    const dateStr = new Date(data.createdAt).toLocaleDateString();
-    item.innerHTML = `
-        <div class="announcement-date">${dateStr}</div>
-        <h3 class="announcement-title">${escapeHTML(data.title)}</h3>
-        <p class="announcement-text">${escapeHTML(data.content).replace(/\n/g, '<br>')}</p>
-    `;
-    return item;
-}
-
-socket.on('announcement list', (list) => {
-    announcementList.innerHTML = '';
-    list.forEach(data => announcementList.appendChild(createAnnouncementElement(data)));
-});
-
-socket.on('new announcement', (data) => {
-    announcementList.insertBefore(createAnnouncementElement(data), announcementList.firstChild);
-    // 如果目前不在公告畫面，顯示小紅點提示
-    if (announcementView.classList.contains('hidden')) {
-        featuresDot.classList.remove('hidden');
-        announcementDot.classList.remove('hidden');
-    }
-});
 
 // 監聽加入房間成功
 socket.on('join success', (roomInfo) => {
@@ -1759,7 +1449,6 @@ socket.on('join success', (roomInfo) => {
         roomTitle.textContent = displayName;
     }
     window.ThreadUI?.update(activeThreadParent, getRoomDisplayName(activeThreadParent), activeThreadTitle);
-    updateReactChatLinkTarget();
     
     // 切換視圖到聊天室
     lobbyView.classList.add('hidden');
@@ -1776,7 +1465,6 @@ socket.on('join error', (errorKey) => {
     pendingRoomFromUrl = '';
     syncRoomQueryParam('');
     alert(t[errorKey] || '加入房間失敗！');
-    updateReactChatLinkTarget();
 });
 
 // 監聽搜尋框的輸入事件
@@ -1848,7 +1536,6 @@ socket.on('room deleted', (payload) => {
     if (!payload || payload.room !== currentRoom) return;
     addSystemMessage(t.room_deleted || '⚠️ 房間已被刪除，返回大廳。');
     backBtn.click();
-    updateReactChatLinkTarget();
 });
 
 socket.on('room renamed', (payload) => {
@@ -2010,7 +1697,6 @@ socket.on('kicked', ({room}) => {
     if (room && currentRoom === room) {
         addSystemMessage(`⚠️ 你已被踢出 ${room}`); // option use translations?
         backBtn.click();
-        updateReactChatLinkTarget();
     }
 });
 
@@ -2054,7 +1740,7 @@ const SIDE_PANEL_DEFINITIONS = {
             {
                 id: 'desktop-shortcuts',
                 title: '快速捷徑',
-                content: '/rooms︰顯示所有開放話題\n/hot︰只看熱門\n/announce︰查看公告'
+                content: '直接輸入房名︰建立或加入公開話題\n/lock 密碼 房名︰建立鎖房\n/hot︰只看熱門\n/lock︰只看鎖房\n/open︰只看公開房間'
             },
             {
                 id: 'desktop-support',

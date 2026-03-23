@@ -24,7 +24,22 @@ function registerChatHandlers(socket, io, fetchLinkPreview, handleCommand) {
         }
 
         const timestamp = Date.now();
-        const messageData = { id: socket.userId, text, timestamp, useMarkdown, replyTo, effect, linkPreview: null };
+        const displayName = socket.displayName || '';
+        const normalizedReplyTo = replyTo ? {
+            id: replyTo.id,
+            displayName: typeof replyTo.displayName === 'string' ? replyTo.displayName : '',
+            text: replyTo.text
+        } : undefined;
+        const messageData = {
+            id: socket.userId,
+            displayName,
+            text,
+            timestamp,
+            useMarkdown,
+            replyTo: normalizedReplyTo,
+            effect,
+            linkPreview: null
+        };
 
         const existingRoom = await Room.findOne({ name: room });
         if (existingRoom) {
@@ -63,7 +78,11 @@ function registerChatHandlers(socket, io, fetchLinkPreview, handleCommand) {
         const { room, typing } = data || {};
         if (!room) return;
         if (!socket.rooms.has(room)) return;
-        socket.to(room).emit('typing status', { userId: socket.userId, typing: !!typing });
+        socket.to(room).emit('typing status', {
+            userId: socket.userId,
+            displayName: socket.displayName || '',
+            typing: !!typing
+        });
     });
 
     socket.on('poll vote', (data) => {

@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import AdminTokenBanner from './components/AdminTokenBanner';
 import ChatHeader from './components/ChatHeader';
 import Composer from './components/Composer';
 import ContextMenu from './components/ContextMenu';
@@ -7,6 +6,8 @@ import MessageList from './components/MessageList';
 import Sidebar from './components/Sidebar';
 import ThreadBanner from './components/ThreadBanner';
 import { useChatSocket } from './hooks/useChatSocket';
+
+const MOBILE_BREAKPOINT = 980;
 
 const ERROR_MESSAGES = {
   room_name_taken: '房間名稱已存在，請換一個。',
@@ -22,6 +23,7 @@ export default function App() {
   const [draftValue, setDraftValue] = useState('');
   const [markdownEnabled, setMarkdownEnabled] = useState(true);
   const [composerFocusKey, setComposerFocusKey] = useState(0);
+  const [isMobileLayout, setIsMobileLayout] = useState(() => window.innerWidth <= MOBILE_BREAKPOINT);
   const [contextMenu, setContextMenu] = useState({
     open: false,
     x: 0,
@@ -30,21 +32,21 @@ export default function App() {
   });
 
   const {
-    adminToken,
     connected,
     createThread,
     currentRoom,
     currentRoomDisplayName,
     activeThreadParent,
     activeThreadTitle,
+    isRoomOwner,
     joinError,
     joinRoom,
+    kickUser,
     messages,
     rooms,
     sendMessage,
     sendTyping,
     scheduleTypingStop,
-    setAdminToken,
     setJoinError,
     setSystemNotice,
     systemNotice,
@@ -68,6 +70,17 @@ export default function App() {
 
     return () => {
       alive = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobileLayout(window.innerWidth <= MOBILE_BREAKPOINT);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('resize', handleResize);
     };
   }, []);
 
@@ -98,7 +111,10 @@ export default function App() {
 
   const handleOpenContextMenu = (event, message) => {
     const width = 220;
-    const height = 156;
+    const canKickFromMenu = Boolean(
+      isRoomOwner && message?.id && message.id !== 'System' && message.id !== userId
+    );
+    const height = canKickFromMenu ? 204 : 156;
     setContextMenu({
       open: true,
       x: Math.max(12, Math.min(event.clientX, window.innerWidth - width - 12)),
@@ -132,6 +148,7 @@ export default function App() {
     if (!contextMenu.message) return;
     setReplyingTo({
       id: contextMenu.message.id,
+      displayName: contextMenu.message.displayName || '',
       text: contextMenu.message.text
     });
     closeContextMenu();
@@ -143,15 +160,10 @@ export default function App() {
     closeContextMenu();
   };
 
-  const handleCopyAdminToken = async () => {
-    if (!adminToken) return;
-    try {
-      await navigator.clipboard.writeText(adminToken);
-      setSystemNotice('已複製房主管理金鑰');
-    } catch (error) {
-      console.warn('copy admin token failed', error);
-      setSystemNotice('複製管理金鑰失敗，請再試一次');
-    }
+  const handleKickFromMenu = () => {
+    if (!contextMenu.message?.id || contextMenu.message.id === userId) return;
+    kickUser(contextMenu.message.id);
+    closeContextMenu();
   };
 
   const focusComposer = () => {
@@ -183,28 +195,33 @@ export default function App() {
 
   const parentRoomDisplayName =
     rooms.find((room) => room.name === activeThreadParent)?.displayName || activeThreadParent;
-  const mainSiteRoom = activeThreadParent || currentRoom;
-  const mainSiteHref = mainSiteRoom
-    ? `/?room=${encodeURIComponent(mainSiteRoom)}`
-    : '/';
+  const mainSiteHref = '/react-board/';
+  const canKickFromContextMenu = Boolean(
+    isRoomOwner &&
+    contextMenu.message?.id &&
+    contextMenu.message.id !== 'System' &&
+    contextMenu.message.id !== userId
+  );
 
   return (
     <div className="app-shell">
-      <Sidebar
-        activeThreadParent={activeThreadParent}
-        activeThreadTitle={activeThreadTitle}
-        adminToken={adminToken}
-        connected={connected}
-        currentRoom={currentRoom}
-        currentRoomDisplayName={currentRoomDisplayName}
-        mainSiteHref={mainSiteHref}
-        onCopyRoomLink={handleCopyRoomLink}
-        onFocusComposer={focusComposer}
-        onJoinRoom={handleJoinRoomFromSidebar}
-        onUseCommand={handleUseCommand}
-        rooms={rooms}
-        userId={userId}
-      />
+      {!isMobileLayout && (
+        <Sidebar
+          activeThreadParent={activeThreadParent}
+          activeThreadTitle={activeThreadTitle}
+          connected={connected}
+          currentRoom={currentRoom}
+          currentRoomDisplayName={currentRoomDisplayName}
+          isRoomOwner={isRoomOwner}
+          mainSiteHref={mainSiteHref}
+          onCopyRoomLink={handleCopyRoomLink}
+          onFocusComposer={focusComposer}
+          onJoinRoom={handleJoinRoomFromSidebar}
+          onUseCommand={handleUseCommand}
+          rooms={rooms}
+          userId={userId}
+        />
+      )}
 
       <main className="chat-shell app-card">
         <ChatHeader
@@ -214,6 +231,7 @@ export default function App() {
               ? activeThreadTitle || currentRoomDisplayName || currentRoom
               : ''
           }
+          isMobile={isMobileLayout}
           mainSiteHref={mainSiteHref}
           userId={userId}
           version={version}
@@ -248,14 +266,9 @@ export default function App() {
           parentDisplayName={parentRoomDisplayName}
         />
 
-        <AdminTokenBanner
-          onCopy={handleCopyAdminToken}
-          token={adminToken}
-          onDismiss={() => setAdminToken('')}
-        />
-
         <MessageList
           currentRoom={currentRoom}
+          isMobile={isMobileLayout}
           messages={messages}
           onContextMenu={handleOpenContextMenu}
           onCreateThread={handleCreateThread}
@@ -269,6 +282,7 @@ export default function App() {
           currentRoom={currentRoom}
           draftValue={draftValue}
           focusRequestKey={composerFocusKey}
+          isMobile={isMobileLayout}
           markdownEnabled={markdownEnabled}
           onDraftChange={setDraftValue}
           onSend={sendMessage}
@@ -285,11 +299,14 @@ export default function App() {
         />
 
         <ContextMenu
+          isMobile={isMobileLayout}
           menu={contextMenu}
           onClose={closeContextMenu}
           onCopy={handleCopyMessage}
+          onKick={handleKickFromMenu}
           onReply={handleReplyFromMenu}
           onThread={handleThreadFromMenu}
+          showKick={canKickFromContextMenu}
         />
       </main>
     </div>

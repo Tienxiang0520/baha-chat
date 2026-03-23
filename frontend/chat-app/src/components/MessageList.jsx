@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import MessageItem from './MessageItem';
 
 export default function MessageList(props) {
-  const { currentRoom, messages, onContextMenu } = props;
+  const { currentRoom, messages, onContextMenu, isMobile } = props;
   const listRef = useRef(null);
 
   useEffect(() => {
@@ -48,7 +48,7 @@ export default function MessageList(props) {
       {!currentRoom && (
         <div className="message-panel__empty">
           <strong>還沒進房間</strong>
-          <p>先從主站挑一個房間，React 版會專注在房內聊天。</p>
+          <p>先從左側快速切房挑一個房間，或使用帶 `room` 參數的分享連結。</p>
         </div>
       )}
 
@@ -57,6 +57,7 @@ export default function MessageList(props) {
           <MessageItem
             key={message.mid || `${message.id}-${message.timestamp}-${message.text}`}
             {...props}
+            isMobile={isMobile}
             message={message}
             onContextMenu={onContextMenu}
           />

@@ -1,3 +1,5 @@
+import { COMMAND_SUGGESTIONS } from '../lib/commandSuggestions';
+
 function ShortcutButton({ disabled = false, label, onClick, secondary = false }) {
   return (
     <button
@@ -27,10 +29,10 @@ function RoomSwitchButton({ active = false, label, meta, onClick }) {
 export default function Sidebar({
   activeThreadParent,
   activeThreadTitle,
-  adminToken,
   connected,
   currentRoom,
   currentRoomDisplayName,
+  isRoomOwner,
   mainSiteHref,
   onCopyRoomLink,
   onFocusComposer,
@@ -40,6 +42,9 @@ export default function Sidebar({
   userId
 }) {
   const hasRoom = Boolean(currentRoom);
+  const shortcutCommands = COMMAND_SUGGESTIONS.filter((command) =>
+    !['/rename', '/private', '/public', '/clear', '/delete'].includes(command.name)
+  );
   const switchableRooms = (Array.isArray(rooms) ? rooms : [])
     .filter((room) => !room.isThread)
     .slice()
@@ -54,7 +59,7 @@ export default function Sidebar({
     <aside className="sidebar app-card">
       <div className="sidebar__intro">
         <h1>房內控制台</h1>
-        <p>React 版專注在房間內聊天，把建立房間與大廳瀏覽留給主站。</p>
+        <p>React 版現在就是主站，先選房，再專心聊天與管理房間。</p>
       </div>
 
       <section className="sidebar-panel">
@@ -84,16 +89,16 @@ export default function Sidebar({
               </div>
               <div className="sidebar-badge">
                 <span>管理狀態</span>
-                <strong>{adminToken ? '房主可管理' : '一般訪客'}</strong>
+                <strong>{isRoomOwner ? '房主可管理' : '一般訪客'}</strong>
               </div>
             </div>
           </div>
         ) : (
           <div className="sidebar-empty">
             <strong>還沒指定房間</strong>
-            <p>建議先從主站選房，再切到 React 版聊天室。</p>
+            <p>先從下方快速切房挑一個房間，或用分享連結直接進房。</p>
             <a className="primary-btn sidebar-link-btn" href={mainSiteHref}>
-              返回主站選房
+              回首頁
             </a>
           </div>
         )}
@@ -118,57 +123,44 @@ export default function Sidebar({
         ) : (
           <div className="sidebar-empty">
             <strong>暫時沒有可切換房間</strong>
-            <p>主站建立房間後，這裡會同步顯示熱門房間。</p>
+            <p>目前還沒有公開房間，等有人建立後這裡就會同步出現。</p>
           </div>
         )}
       </section>
 
-      <section className="sidebar-panel">
+      <section className="sidebar-panel sidebar-panel--shortcuts">
         <div className="sidebar-panel__header">
           <h2>快捷操作</h2>
         </div>
         <div className="sidebar-shortcut-list">
           <ShortcutButton disabled={!hasRoom} label="聚焦輸入框" onClick={onFocusComposer} />
           <ShortcutButton disabled={!hasRoom} label="複製房間連結" onClick={onCopyRoomLink} />
-          <ShortcutButton disabled={!hasRoom} label="插入 /poll" onClick={() => onUseCommand('/poll 問題 | 選項一 | 選項二')} />
-          <ShortcutButton disabled={!hasRoom} label="插入 /canvas" onClick={() => onUseCommand('/canvas')} />
-          <ShortcutButton disabled={!hasRoom} label="插入 /thread" onClick={() => onUseCommand('/thread 討論串標題')} />
-          <ShortcutButton disabled={!hasRoom} label="插入 /roll" onClick={() => onUseCommand('/roll')} />
-          <ShortcutButton label="返回主站" onClick={() => window.location.assign(mainSiteHref)} secondary />
+          {shortcutCommands.map((command) => (
+            <ShortcutButton
+              key={command.name}
+              disabled={!hasRoom}
+              label={`插入 ${command.name}`}
+              onClick={() => onUseCommand(command.template)}
+            />
+          ))}
         </div>
       </section>
 
-      <section className="sidebar-panel sidebar-panel--grow">
-        <div className="sidebar-panel__header">
-          <h2>{adminToken ? '房主管理' : '聊天提示'}</h2>
-        </div>
+      {isRoomOwner && (
+        <section className="sidebar-panel sidebar-panel--grow">
+          <div className="sidebar-panel__header">
+            <h2>房主管理</h2>
+          </div>
 
-        {adminToken ? (
           <div className="sidebar-shortcut-list">
             <ShortcutButton disabled={!hasRoom} label="插入 /rename" onClick={() => onUseCommand('/rename 新名稱')} />
             <ShortcutButton disabled={!hasRoom} label="插入 /private" onClick={() => onUseCommand('/private 密碼')} />
             <ShortcutButton disabled={!hasRoom} label="插入 /public" onClick={() => onUseCommand('/public')} />
             <ShortcutButton disabled={!hasRoom} label="插入 /clear" onClick={() => onUseCommand('/clear')} />
             <ShortcutButton disabled={!hasRoom} label="插入 /delete" onClick={() => onUseCommand('/delete')} />
-            <ShortcutButton disabled={!hasRoom} label="插入 /adminkey" onClick={() => onUseCommand('/adminkey')} secondary />
           </div>
-        ) : (
-          <div className="sidebar-tip-list">
-            <div className="sidebar-tip-card">
-              <strong>快速投票</strong>
-              <span>/poll 問題 | 選項一 | 選項二</span>
-            </div>
-            <div className="sidebar-tip-card">
-              <strong>分享白板</strong>
-              <span>/canvas</span>
-            </div>
-            <div className="sidebar-tip-card">
-              <strong>擲骰子</strong>
-              <span>/roll</span>
-            </div>
-          </div>
-        )}
-      </section>
+        </section>
+      )}
     </aside>
   );
 }

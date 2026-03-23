@@ -111,6 +111,13 @@ code {
   min-height: 0;
 }
 
+.sidebar-panel--shortcuts .sidebar-shortcut-list {
+  height: 320px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 4px;
+}
+
 .sidebar-panel__header {
   display: flex;
   align-items: center;
@@ -863,7 +870,12 @@ code {
 }
 
 .composer {
+  position: relative;
   padding: 14px;
+}
+
+.composer--sheet-open {
+  z-index: 40;
 }
 
 .composer__toolbar {
@@ -920,6 +932,87 @@ code {
   display: grid;
   gap: 8px;
   backdrop-filter: blur(18px);
+}
+
+.composer__command-sheet-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  border: none;
+  background: rgba(15, 23, 42, 0.18);
+  backdrop-filter: blur(4px);
+}
+
+.composer__command-sheet {
+  position: fixed;
+  left: 10px;
+  right: 10px;
+  bottom: 10px;
+  z-index: 81;
+  padding: 10px 10px 12px;
+  border-radius: 24px 24px 18px 18px;
+  border: 1px solid rgba(92, 124, 255, 0.18);
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 -6px 28px rgba(15, 23, 42, 0.18);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.composer__command-sheet-handle {
+  width: 54px;
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(22, 32, 51, 0.14);
+  margin: 0 auto;
+}
+
+.composer__command-sheet-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.composer__command-sheet-header strong {
+  display: block;
+  font-size: 1rem;
+}
+
+.composer__command-sheet-header p {
+  margin: 4px 0 0;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.composer__command-sheet-list {
+  max-height: min(50vh, 360px);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-right: 2px;
+}
+
+.composer__command-sheet-item {
+  width: 100%;
+  border: 1px solid rgba(22, 32, 51, 0.08);
+  background: rgba(255, 255, 255, 0.94);
+  border-radius: 16px;
+  padding: 12px 14px;
+  display: grid;
+  gap: 4px;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.composer__command-sheet-item:hover,
+.composer__command-sheet-item:active {
+  transform: translateY(-1px);
+  border-color: rgba(92, 124, 255, 0.36);
+  box-shadow: 0 12px 22px rgba(52, 94, 223, 0.1);
 }
 
 .composer__command-item {
@@ -1026,6 +1119,10 @@ code {
   backdrop-filter: blur(16px);
 }
 
+.context-menu__handle {
+  display: none;
+}
+
 .context-menu button {
   width: 100%;
   border: none;
@@ -1039,6 +1136,14 @@ code {
 
 .context-menu button:hover {
   background: rgba(92, 124, 255, 0.1);
+}
+
+.context-menu button.context-menu__danger {
+  color: #d14343;
+}
+
+.context-menu button.context-menu__danger:hover {
+  background: rgba(209, 67, 67, 0.1);
 }
 
 blockquote {
@@ -1060,33 +1165,32 @@ pre {
   html,
   body,
   #root {
-    height: auto;
+    height: 100%;
     min-height: 100%;
   }
 
   body {
-    overflow: auto;
+    overflow: hidden;
   }
 
   .app-shell {
-    width: min(100vw - 16px, 100%);
-    height: auto;
-    grid-template-columns: 1fr;
-    margin: 8px;
+    width: 100vw;
+    height: 100svh;
+    display: block;
+    margin: 0;
   }
 
-  .sidebar,
   .chat-shell {
-    height: auto;
-    min-height: auto;
-    overflow: visible;
+    height: 100svh;
+    min-height: 100svh;
+    border-radius: 0;
+    border: none;
+    padding: 14px 12px calc(14px + env(safe-area-inset-bottom));
+    overflow: hidden;
   }
 
   .chat-shell__header,
-  .inline-banner,
-  .composer__toolbar,
-  .reply-banner,
-  .composer__form {
+  .reply-banner {
     flex-direction: column;
     align-items: stretch;
   }
@@ -1095,29 +1199,153 @@ pre {
     justify-content: flex-start;
   }
 
-  .sidebar-badge-grid {
-    grid-template-columns: 1fr;
+  .chat-shell__header {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 10px 12px;
+    align-items: center;
   }
 
-  .composer__toolbar-actions {
-    width: 100%;
+  .chat-shell__title-group p {
+    margin-top: 4px;
   }
 
-  .composer__toolbar-actions .ghost-btn {
+  .chat-shell__meta {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85rem;
+  }
+
+  .message-panel {
     flex: 1;
+    min-height: 0;
+  }
+
+  .message-list {
+    padding: 14px 12px 18px;
   }
 
   .message-item {
-    max-width: 88%;
+    max-width: 86%;
+  }
+
+  .composer {
+    border-radius: 22px;
+    padding: 12px;
+  }
+
+  .composer--mobile {
+    padding: 10px;
+  }
+
+  .composer__toolbar {
+    margin-bottom: 8px;
+  }
+
+  .composer__toolbar--mobile {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 8px 10px;
+  }
+
+  .composer__toolbar-actions {
+    display: flex;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  .composer__toolbar-actions .ghost-btn {
+    padding: 8px 12px;
+    border-radius: 12px;
+  }
+
+  .composer__hint {
+    font-size: 0.8rem;
+  }
+
+  .composer__hint--mobile {
+    display: block;
+    min-width: 0;
+    text-align: right;
+    font-size: 0.75rem;
+    line-height: 1.35;
   }
 
   .composer__command-menu {
     left: 0;
     right: 0;
     width: auto;
+    bottom: calc(100% + 8px);
+  }
+
+  .composer__command-sheet {
+    left: 8px;
+    right: 8px;
+    bottom: calc(8px + env(safe-area-inset-bottom));
+    max-height: min(62vh, 480px);
+  }
+
+  .composer__command-sheet-list {
+    max-height: min(46vh, 340px);
+  }
+
+  .composer__form {
+    align-items: flex-end;
+  }
+
+  .composer__input {
+    min-height: 56px;
+    max-height: 132px;
   }
 
   .composer__submit {
-    width: 100%;
+    min-width: 88px;
+    width: auto;
+  }
+
+  .notice {
+    border-radius: 16px;
+  }
+
+  .context-menu__overlay {
+    background: rgba(15, 23, 42, 0.18);
+    backdrop-filter: blur(3px);
+  }
+
+  .context-menu--mobile {
+    left: 10px !important;
+    right: 10px !important;
+    top: auto !important;
+    bottom: calc(10px + env(safe-area-inset-bottom));
+    min-width: 0;
+    padding: 10px;
+    border-radius: 24px 24px 18px 18px;
+    display: grid;
+    gap: 8px;
+  }
+
+  .context-menu--mobile .context-menu__handle {
+    display: block;
+    width: 52px;
+    height: 5px;
+    border-radius: 999px;
+    margin: 0 auto 2px;
+    background: rgba(22, 32, 51, 0.14);
+  }
+
+  .context-menu--mobile button:not(.context-menu__overlay) {
+    padding: 12px 14px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid rgba(22, 32, 51, 0.08);
+  }
+
+  .context-menu--mobile button.context-menu__danger {
+    color: #cf3e3e;
+    background: rgba(255, 241, 241, 0.95);
+    border-color: rgba(207, 62, 62, 0.18);
   }
 }

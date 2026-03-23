@@ -65,6 +65,7 @@ connectDB();
 // 2. 載入資料庫模型 (Models)
 const Room = require('./models/Room');
 const Announcement = require('./models/Announcement');
+const AnonymousProfile = require('./models/AnonymousProfile');
 const { version: appVersion } = require('./package.json');
 
 // 3. 確保預設的「綜合閒聊」大廳永遠存在
@@ -74,16 +75,58 @@ Room.findOne({ name: '綜合閒聊' }).then(room => {
     }
 });
 
-// 設定靜態檔案資料夾，讓 Express 可以提供 HTML, CSS, JS 檔案
+const reactChatDistPath = path.join(__dirname, 'frontend', 'chat-app', 'dist');
+const reactBoardDistPath = path.join(__dirname, 'frontend', 'board-app', 'dist');
+const reactFeatureDistPath = path.join(__dirname, 'frontend', 'feature-app', 'dist');
+
+function normalizeDisplayName(value) {
+    return String(value || '').trim().slice(0, 24);
+}
+
+app.get('/', (req, res, next) => {
+    if (fs.existsSync(reactBoardDistPath)) {
+        res.redirect(302, '/react-board/');
+        return;
+    }
+    next();
+});
+
+app.get('/index.html', (req, res, next) => {
+    if (fs.existsSync(reactBoardDistPath)) {
+        res.redirect(302, '/react-board/');
+        return;
+    }
+    next();
+});
+
 app.use(express.static('public'));
 
-const reactChatDistPath = path.join(__dirname, 'frontend', 'chat-app', 'dist');
 if (fs.existsSync(reactChatDistPath)) {
     app.use('/react-chat', express.static(reactChatDistPath));
     app.get(/^\/react-chat(?:\/.*)?$/, (req, res) => {
         res.sendFile(path.join(reactChatDistPath, 'index.html'));
     });
 }
+
+if (fs.existsSync(reactBoardDistPath)) {
+    app.use('/react-board', express.static(reactBoardDistPath));
+    app.get(/^\/react-board(?:\/.*)?$/, (req, res) => {
+        res.sendFile(path.join(reactBoardDistPath, 'index.html'));
+    });
+}
+
+if (fs.existsSync(reactFeatureDistPath)) {
+    app.use('/react-features', express.static(reactFeatureDistPath));
+    app.get(/^\/react-features(?:\/.*)?$/, (req, res) => {
+        res.sendFile(path.join(reactFeatureDistPath, 'index.html'));
+    });
+}
+
+app.get('/chat/chat-room.html', (req, res) => {
+    const room = typeof req.query.room === 'string' ? req.query.room : '';
+    const target = room ? `/react-chat/?room=${encodeURIComponent(room)}` : '/react-chat/';
+    res.redirect(302, target);
+});
 
 app.get('/meta/version', (req, res) => {
     res.json({
@@ -167,11 +210,16 @@ io.on('connection', async (socket) => {
         ? requestedId
         : socket.id.substring(0, 6);
     socket.userId = userId;
-    socket.isAdmin = false; // 預設為一般使用者
-    socket.adminRooms = new Set();
     socket.mutedRooms = new Map();
-    socket.loginAttempts = 0; // 初始化登入嘗試次數
-    socket.lockoutUntil = null; // 初始化鎖定時間
+    socket.displayName = '';
+
+    try {
+        const profile = await AnonymousProfile.findOne({ userId });
+        socket.displayName = normalizeDisplayName(profile?.displayName);
+    } catch (profileError) {
+        error('載入匿名身份資料失敗:', profileError);
+    }
+
     const currentTotalUsers = io.engine.clientsCount;
     log(`📡 [連線] 匿名使用者 ${userId} (ID: ${socket.id}) 已進入，當前總人數: ${currentTotalUsers}`);
 
@@ -194,6 +242,63 @@ io.on('connection', async (socket) => {
             error('取得伺服器狀態失敗:', err);
             if (typeof callback === 'function') {
                 callback({ error: '無法取得伺服器狀態' });
+            }
+        }
+    });
+
+    socket.on('request anonymous profile', async (callback) => {
+        const payload = {
+            userId: socket.userId,
+            displayName: socket.displayName || ''
+        };
+
+        if (typeof callback === 'function') {
+            callback(payload);
+        } else {
+            socket.emit('anonymous profile', payload);
+        }
+    });
+
+    socket.on('set anonymous display name', async (data, callback) => {
+        const displayName = normalizeDisplayName(data?.displayName);
+
+        try {
+            await AnonymousProfile.findOneAndUpdate(
+                { userId: socket.userId },
+                {
+                    $set: {
+                        displayName,
+                        updatedAt: Date.now()
+                    }
+                },
+                {
+                    upsert: true,
+                    new: true,
+                    setDefaultsOnInsert: true
+                }
+            );
+
+            socket.displayName = displayName;
+            const payload = {
+                ok: true,
+                userId: socket.userId,
+                displayName
+            };
+
+            if (typeof callback === 'function') {
+                callback(payload);
+            } else {
+                socket.emit('anonymous profile updated', payload);
+            }
+        } catch (profileSaveError) {
+            error('儲存匿名名稱失敗:', profileSaveError);
+            if (typeof callback === 'function') {
+                callback({ ok: false, error: 'save_failed' });
+            } else {
+                socket.emit('anonymous profile updated', {
+                    ok: false,
+                    error: 'save_failed'
+                });
             }
         }
     });

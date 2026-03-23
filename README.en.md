@@ -9,7 +9,7 @@ Baha is a real-time anonymous text chat platform built with Node.js and Socket.i
 
 ## ✨ Core Features
 
-- **Completely Anonymous**: The system automatically assigns a random short ID (8~10 characters) to each connected user, and generates an exclusive fixed display color for each ID via a hash algorithm; the ID is stored in the browser’s localStorage so it survives page reloads and short reconnects until cache is cleared.
+- **Completely Anonymous**: The system automatically assigns a random short ID (8~10 characters) to each connected user, and generates an exclusive fixed display color for each ID via a hash algorithm; the ID is stored in the browser’s localStorage so it survives page reloads and short reconnects until cache is cleared. The feature center can also copy or import the same anonymous key so you can keep the same identity across devices.
 - **Multi-language Support (i18n)**: Automatically detects browser language, providing Traditional Chinese, Simplified Chinese, English, Japanese, Korean, and Vietnamese interfaces.
 - **PWA Desktop Installation**: Perfectly adapts to mobile notches and bottom safe areas. Supports direct installation to mobile and desktop home screens for a native app-like fullscreen experience.
 - **Dynamic Topic Lobby**:
@@ -32,7 +32,7 @@ Baha is a real-time anonymous text chat platform built with Node.js and Socket.i
   - Recognizes Google Drive URLs and converts them into clear one-click download buttons.
 - **🚀 Danmaku Mode**: When the message frequency in a room is too high (over 10 msgs/sec), the system automatically activates Danmaku mode. Messages will fly across the screen from right to left, preventing the chat from scrolling too fast to read.
 - **Data Persistence**: Integrated with MongoDB cloud database. Topic lists and the latest 50 chat records are safely stored even if the server restarts or sleeps.
-- **Room hosts & admin controls**: Room creators immediately receive a unique `Baha-Admin-XXXX-XXXX` admin key. As long as the anonymous ID stored in the browser’s `localStorage` is intact, replaying `/auth <key>` inside that room instantly restores admin rights—without needing to log in again. Once you are an admin, commands like `/rename`, `/public`, `/private`, `/clear`, `/delete`, `/ban`, `/kick`, `/mute`, and `/announce` let you keep the room tidy without exposing your real identity.
+- **Room hosts & admin controls**: Room ownership is tied directly to the anonymous identity that created the room. As long as you keep the same anonymous key in `localStorage`, or import that same key on another device, you can continue using room management commands like `/rename`, `/public`, `/private`, `/clear`, `/delete`, `/ban`, `/kick`, `/mute`, and `/announce` without any separate admin login flow.
 - **Server Load Alerts**: When the total online users reach the threshold (190 users), the backend automatically sends an email to alert the administrator.
 - **Graceful Reconnection**: Provides a fullscreen loading/reconnection overlay when the server sleeps or network disconnects, optimizing user experience.
 
@@ -76,7 +76,6 @@ The Markdown stack now layers on three plugin families:
 - `/party [text]`: Fullscreen confetti explosion, perfect for celebrations or welcoming!
 - `/quake [text]`: Fullscreen severe shaking, great for expressing shock or excitement!
 - `/poll <question> | <option1> | <option2> [...]`: Start a poll inside the room, which renders a live vote card; everyone’s clicks immediately update the counts.
-- `/auth <key>`: Room creators receive a `Baha-Admin-XXXX` key—use it to reclaim admin rights for that room if you revisit it later.
 - `/kick <ID>`: Admins can expel a specific anonymous ID from the room.
 - `/mute <ID>`: Admins can silence an ID so they cannot send messages while still seeing the chat.
 - `typing indicator`: The chat footer shows who is typing (by their anonymous ID) so everyone knows when someone is composing a message.
@@ -91,7 +90,7 @@ When you create a new room, the client now immediately warns you if the name is 
 
 ## 🛡️ Room Host & Admin Commands
 
-When you create a room you get a one-time `Baha-Admin-XXXX-XXXX` key that is stored in the chat view and can be used later via `/auth <key>` as long as your anonymous ID is preserved in `localStorage`. This lets you reclaim admin privileges without logging in.
+Room ownership now follows the anonymous identity that created the room. If the same anonymous key remains in `localStorage`, or you import that key on another device, you keep the same room-host privileges without a separate login or recovery code.
 
 Once you are an admin for a room you can maintain it with:
 

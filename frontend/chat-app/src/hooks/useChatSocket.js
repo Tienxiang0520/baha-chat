@@ -2,10 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { io } from 'socket.io-client';
 import { getOrCreateUserId } from '../lib/userId';
 
-const ADMIN_TOKEN_STORAGE_PREFIX = 'baha-admin-token:';
 const POLL_VOTE_STORAGE_PREFIX = 'baha-poll-vote:';
 const TYPING_INACTIVITY_MS = 2500;
-const DEFAULT_REACT_ROOM = '綜合閒聊';
 
 function updateMessageById(list, messageId, updater) {
   return list.map((entry) => {
@@ -40,7 +38,7 @@ export function useChatSocket() {
   const pendingJoinRef = useRef(null);
   const pendingCreatedRoomRef = useRef('');
   const roomFromUrlRef = useRef(
-    new URLSearchParams(window.location.search).get('room') || DEFAULT_REACT_ROOM
+    new URLSearchParams(window.location.search).get('room') || ''
   );
   const roomPasswordCacheRef = useRef(new Map());
   const typingTimerRef = useRef(null);
@@ -51,11 +49,11 @@ export function useChatSocket() {
   const [rooms, setRooms] = useState([]);
   const [currentRoom, setCurrentRoom] = useState('');
   const [currentRoomDisplayName, setCurrentRoomDisplayName] = useState('');
+  const [currentRoomIsOwner, setCurrentRoomIsOwner] = useState(false);
   const [activeThreadParent, setActiveThreadParent] = useState('');
   const [activeThreadTitle, setActiveThreadTitle] = useState('');
   const [messages, setMessages] = useState([]);
   const [typingUsers, setTypingUsers] = useState([]);
-  const [adminToken, setAdminToken] = useState('');
   const [joinError, setJoinError] = useState('');
   const [systemNotice, setSystemNotice] = useState('');
 
@@ -95,26 +93,16 @@ export function useChatSocket() {
     pendingJoinRef.current = null;
     setCurrentRoom('');
     setCurrentRoomDisplayName('');
+    setCurrentRoomIsOwner(false);
     setActiveThreadParent('');
     setActiveThreadTitle('');
     setMessages([]);
-    setAdminToken('');
     setJoinError('');
     clearTypingState();
     syncRoomUrl('');
     if (notice) {
       setSystemNotice(notice);
     }
-  };
-
-  const persistAdminToken = (roomName, token) => {
-    if (!roomName || !token) return;
-    window.sessionStorage.setItem(`${ADMIN_TOKEN_STORAGE_PREFIX}${roomName}`, token);
-  };
-
-  const getPersistedAdminToken = (roomName) => {
-    if (!roomName) return '';
-    return window.sessionStorage.getItem(`${ADMIN_TOKEN_STORAGE_PREFIX}${roomName}`) || '';
   };
 
   const requestRoomPassword = (displayName) =>
@@ -155,7 +143,7 @@ export function useChatSocket() {
     if (!text.trim()) return false;
 
     if (!targetRoom) {
-      setSystemNotice('目前尚未加入房間，請先從主站選房。');
+      setSystemNotice('目前尚未加入房間，請先選一個房間。');
       return false;
     }
 
@@ -202,6 +190,31 @@ export function useChatSocket() {
       })
     );
     socketRef.current?.emit('poll vote', { pollId, optionIndex });
+  };
+
+  const kickUser = (targetUserId) => {
+    const targetRoom = currentRoomRef.current;
+    const socket = socketRef.current;
+
+    if (!targetUserId || targetUserId === userId) return false;
+
+    if (!targetRoom) {
+      setSystemNotice('目前尚未加入房間，無法踢人。');
+      return false;
+    }
+
+    if (!socket?.connected) {
+      setSystemNotice('目前尚未連線完成，請稍後再試。');
+      return false;
+    }
+
+    socket.emit('chat message', {
+      room: targetRoom,
+      text: `/kick ${targetUserId}`,
+      useMarkdown: false
+    });
+
+    return true;
   };
 
   const sendTyping = (typing) => {
@@ -256,17 +269,11 @@ export function useChatSocket() {
       setRooms(Array.isArray(nextRooms) ? nextRooms : []);
     });
 
-    socket.on('room admin token', (payload) => {
-      if (!payload?.room || !payload?.token) return;
-      persistAdminToken(payload.room, payload.token);
-      if (payload.room === currentRoomRef.current || pendingCreatedRoomRef.current === payload.room) {
-        setAdminToken(payload.token);
-      }
-      if (pendingCreatedRoomRef.current === payload.room) {
-        pendingCreatedRoomRef.current = '';
-        joinRoom(payload.room);
-      }
-      setSystemNotice('已收到房主管理金鑰，請妥善保存。');
+    socket.on('room created', (payload) => {
+      if (!payload?.room || pendingCreatedRoomRef.current !== payload.room) return;
+      pendingCreatedRoomRef.current = '';
+      setSystemNotice(`已建立 ${payload.displayName || payload.room}，正在進入房間。`);
+      joinRoom(payload.room);
     });
 
     socket.on('room create error', (errorKey) => {
@@ -282,9 +289,9 @@ export function useChatSocket() {
 
       setCurrentRoom(roomName);
       setCurrentRoomDisplayName(displayName);
+      setCurrentRoomIsOwner(Boolean(roomInfo?.isOwner));
       setActiveThreadParent(isThread ? (roomInfo?.parentRoom || '') : '');
       setActiveThreadTitle(isThread ? (roomInfo?.threadTitle || '') : '');
-      setAdminToken(getPersistedAdminToken(roomName));
       setJoinError('');
       clearTypingState();
       syncRoomUrl(roomName);
@@ -371,11 +378,14 @@ export function useChatSocket() {
     socket.on('typing status', (payload) => {
       if (!payload?.userId || payload.userId === userId) return;
       if (payload.typing) {
-        typingMapRef.current.set(payload.userId, Date.now());
+        typingMapRef.current.set(
+          payload.userId,
+          payload.displayName || payload.userId
+        );
       } else {
         typingMapRef.current.delete(payload.userId);
       }
-      setTypingUsers(Array.from(typingMapRef.current.keys()));
+      setTypingUsers(Array.from(typingMapRef.current.values()));
     });
 
     socket.on('poll update', (payload) => {
@@ -430,8 +440,15 @@ export function useChatSocket() {
     };
   }, [userId]);
 
+  const isRoomOwner = useMemo(() => {
+    const roomFromList = rooms.find((room) => room.name === currentRoom);
+    if (roomFromList?.creatorId) {
+      return roomFromList.creatorId === userId;
+    }
+    return currentRoomIsOwner;
+  }, [currentRoom, currentRoomIsOwner, rooms, userId]);
+
   return {
-    adminToken,
     connected,
     createRoom,
     createThread,
@@ -439,6 +456,7 @@ export function useChatSocket() {
     currentRoomDisplayName,
     activeThreadParent,
     activeThreadTitle,
+    isRoomOwner,
     joinError,
     joinRoom,
     messages,
@@ -446,12 +464,12 @@ export function useChatSocket() {
     sendMessage,
     sendTyping,
     scheduleTypingStop,
-    setAdminToken,
     setJoinError,
     setSystemNotice,
     systemNotice,
     typingUsers,
     userId,
+    kickUser,
     votePoll
   };
 }

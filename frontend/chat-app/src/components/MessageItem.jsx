@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import { renderMessageHtml } from '../lib/markdown';
 import { stringToColor } from '../lib/userId';
 
@@ -21,7 +22,15 @@ function LinkPreview({ preview }) {
 }
 
 function PollCard({ poll, onVote }) {
-  if (!poll) return null;
+  const hasValidPoll = poll
+    && typeof poll.id === 'string'
+    && poll.id.trim().length > 0
+    && typeof poll.question === 'string'
+    && poll.question.trim().length > 0
+    && Array.isArray(poll.options)
+    && poll.options.length > 0;
+
+  if (!hasValidPoll) return null;
 
   const totalVotes = poll.options.reduce((sum, option) => sum + (option.count || 0), 0);
 
@@ -55,6 +64,7 @@ function PollCard({ poll, onVote }) {
 }
 
 export default function MessageItem({
+  isMobile,
   message,
   onContextMenu,
   onCreateThread,
@@ -65,6 +75,10 @@ export default function MessageItem({
 }) {
   const isSystem = message.id === 'System';
   const isMine = message.id === userId;
+  const longPressTimerRef = useRef(null);
+  const touchOriginRef = useRef(null);
+  const senderLabel = message.displayName || message.id;
+  const replyLabel = message.replyTo?.displayName || message.replyTo?.id;
   const className = [
     'message-item',
     isMine ? 'is-mine' : '',
@@ -79,24 +93,62 @@ export default function MessageItem({
     minute: '2-digit'
   });
 
+  const clearLongPress = () => {
+    if (longPressTimerRef.current) {
+      window.clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+    touchOriginRef.current = null;
+  };
+
+  const handleTouchStart = (event) => {
+    if (!isMobile || isSystem || !onContextMenu || event.touches.length !== 1) return;
+    const touch = event.touches[0];
+    touchOriginRef.current = { x: touch.clientX, y: touch.clientY };
+    longPressTimerRef.current = window.setTimeout(() => {
+      onContextMenu(
+        {
+          clientX: touch.clientX,
+          clientY: touch.clientY
+        },
+        message
+      );
+      clearLongPress();
+    }, 460);
+  };
+
+  const handleTouchMove = (event) => {
+    if (!longPressTimerRef.current || !touchOriginRef.current || event.touches.length !== 1) return;
+    const touch = event.touches[0];
+    const deltaX = Math.abs(touch.clientX - touchOriginRef.current.x);
+    const deltaY = Math.abs(touch.clientY - touchOriginRef.current.y);
+    if (deltaX > 12 || deltaY > 12) {
+      clearLongPress();
+    }
+  };
+
   return (
     <li
       className={className}
       onContextMenu={(event) => {
-        if (isSystem || !onContextMenu) return;
+        if (isMobile || isSystem || !onContextMenu) return;
         event.preventDefault();
         onContextMenu(event, message);
       }}
+      onTouchCancel={clearLongPress}
+      onTouchEnd={clearLongPress}
+      onTouchMove={handleTouchMove}
+      onTouchStart={handleTouchStart}
     >
       {!isMine && !isSystem && (
         <span className="message-item__user" style={{ color: stringToColor(message.id) }}>
-          {message.id}
+          {senderLabel}
         </span>
       )}
 
       {message.replyTo && (
         <div className="message-reply">
-          <span className="message-reply__label">回覆 {message.replyTo.id}</span>
+          <span className="message-reply__label">回覆 {replyLabel}</span>
           <span className="message-reply__text">{message.replyTo.text}</span>
         </div>
       )}
@@ -128,18 +180,20 @@ export default function MessageItem({
       {!isSystem && (
         <div className="message-item__footer">
           <span className="message-item__time">{timeText}</span>
-          <div className="message-item__actions">
-            <button className="text-btn" type="button" onClick={() => onReply(message)}>
-              回覆
-            </button>
-            <button
-              className="text-btn"
-              type="button"
-              onClick={() => onCreateThread(message)}
-            >
-              討論串
-            </button>
-          </div>
+          {!isMobile && (
+            <div className="message-item__actions">
+              <button className="text-btn" type="button" onClick={() => onReply(message)}>
+                回覆
+              </button>
+              <button
+                className="text-btn"
+                type="button"
+                onClick={() => onCreateThread(message)}
+              >
+                討論串
+              </button>
+            </div>
+          )}
         </div>
       )}
     </li>

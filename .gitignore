@@ -2,5 +2,4 @@ node_modules/
 .DS_Store
 Baha-data.txt
 .env
-create-hash.js
 start_baha.bat
