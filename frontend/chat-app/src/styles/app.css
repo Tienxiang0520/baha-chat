@@ -34,6 +34,44 @@ body {
   overflow: hidden;
 }
 
+body.quake-effect {
+  animation: chat-quake 0.12s ease-in-out infinite;
+}
+
+@keyframes chat-quake {
+  0% { transform: translate(0, 0); }
+  20% { transform: translate(-6px, 4px); }
+  40% { transform: translate(6px, -4px); }
+  60% { transform: translate(-4px, -2px); }
+  80% { transform: translate(4px, 3px); }
+  100% { transform: translate(0, 0); }
+}
+
+.party-confetti {
+  position: fixed;
+  top: -16px;
+  width: 10px;
+  height: 18px;
+  border-radius: 3px;
+  opacity: 0.9;
+  pointer-events: none;
+  z-index: 120;
+  animation-name: confetti-fall;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+
+@keyframes confetti-fall {
+  0% {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+    opacity: 0.95;
+  }
+  100% {
+    transform: translate3d(calc((var(--drift, 0.5) - 0.5) * 160px), 110vh, 0) rotate(540deg);
+    opacity: 0;
+  }
+}
+
 button,
 input,
 textarea {
@@ -870,8 +908,9 @@ code {
 }
 
 .composer {
-  position: relative;
-  padding: 14px;
+    position: relative;
+    padding: 14px;
+    z-index: 6;
 }
 
 .composer--sheet-open {
@@ -919,12 +958,12 @@ code {
 }
 
 .composer__command-menu {
-  position: absolute;
-  left: 0;
-  bottom: calc(100% + 10px);
-  z-index: 8;
-  width: min(360px, calc(100vw - 64px));
-  padding: 10px;
+    position: absolute;
+    left: 0;
+    bottom: calc(100% + 10px);
+    z-index: 60;
+    width: min(360px, calc(100vw - 64px));
+    padding: 10px;
   border-radius: 18px;
   border: 1px solid rgba(92, 124, 255, 0.16);
   background: rgba(255, 255, 255, 0.96);

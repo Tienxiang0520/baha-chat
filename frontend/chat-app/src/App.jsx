@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import ChatHeader from './components/ChatHeader';
 import Composer from './components/Composer';
 import ContextMenu from './components/ContextMenu';
@@ -30,6 +30,7 @@ export default function App() {
     y: 0,
     message: null
   });
+  const triggeredEffectIdsRef = useRef(new Set());
 
   const {
     connected,
@@ -96,6 +97,50 @@ export default function App() {
       window.removeEventListener('keydown', handleEscape);
     };
   }, []);
+
+  useEffect(() => {
+    const latestMessage = messages[messages.length - 1];
+    if (!latestMessage?.effect) return;
+
+    const effectMessageId = latestMessage.mid || latestMessage._id || `${latestMessage.id}-${latestMessage.timestamp}`;
+    if (triggeredEffectIdsRef.current.has(effectMessageId)) return;
+    triggeredEffectIdsRef.current.add(effectMessageId);
+
+    if (latestMessage.effect === 'quake') {
+      document.body.classList.add('quake-effect');
+      const timer = window.setTimeout(() => {
+        document.body.classList.remove('quake-effect');
+      }, 800);
+      return () => {
+        window.clearTimeout(timer);
+        document.body.classList.remove('quake-effect');
+      };
+    }
+
+    if (latestMessage.effect === 'party') {
+      const colors = ['#ff6b6b', '#ffd43b', '#51cf66', '#4dabf7', '#845ef7', '#f06595'];
+      const pieces = Array.from({ length: 48 }, (_, index) => {
+        const piece = document.createElement('div');
+        piece.className = 'party-confetti';
+        piece.style.left = `${Math.random() * 100}vw`;
+        piece.style.setProperty('--drift', Math.random().toFixed(2));
+        piece.style.backgroundColor = colors[index % colors.length];
+        piece.style.animationDuration = `${Math.random() * 1.8 + 2.2}s`;
+        piece.style.animationDelay = `${Math.random() * 0.4}s`;
+        document.body.appendChild(piece);
+        return piece;
+      });
+
+      const timer = window.setTimeout(() => {
+        pieces.forEach((piece) => piece.remove());
+      }, 4200);
+
+      return () => {
+        window.clearTimeout(timer);
+        pieces.forEach((piece) => piece.remove());
+      };
+    }
+  }, [messages]);
 
   const handleJoinThread = (roomName, title) => {
     joinRoom(roomName, null, {

@@ -89,7 +89,7 @@ export default function Composer({
   const applySuggestion = (suggestion) => {
     if (!suggestion) return;
     setCommandMenuPinned(false);
-    setSuggestionsDismissed(false);
+    setSuggestionsDismissed(true);
     onDraftChange(suggestion.template);
     requestAnimationFrame(() => {
       const input = textareaRef.current;
@@ -136,8 +136,11 @@ export default function Composer({
 
   const toggleCommandMenu = () => {
     if (!currentRoom) return;
-    setSuggestionsDismissed(false);
-    setCommandMenuPinned((open) => !open);
+    setCommandMenuPinned((open) => {
+      const nextOpen = !open;
+      setSuggestionsDismissed(!nextOpen);
+      return nextOpen;
+    });
     requestAnimationFrame(() => {
       textareaRef.current?.focus();
     });
