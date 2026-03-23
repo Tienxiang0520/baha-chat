@@ -33,16 +33,89 @@ Baha is a real-time anonymous text chat platform built with Node.js and Socket.i
 - **🚀 Danmaku Mode**: When the message frequency in a room is too high (over 10 msgs/sec), the system automatically activates Danmaku mode. Messages will fly across the screen from right to left, preventing the chat from scrolling too fast to read.
 - **Data Persistence**: Integrated with MongoDB cloud database. Topic lists and the latest 50 chat records are safely stored even if the server restarts or sleeps.
 - **Room hosts & admin controls**: Room ownership is tied directly to the anonymous identity that created the room. As long as you keep the same anonymous key in `localStorage`, or import that same key on another device, you can continue using room management commands like `/rename`, `/public`, `/private`, `/clear`, `/delete`, `/ban`, `/kick`, `/mute`, and `/announce` without any separate admin login flow.
-- **Server Load Alerts**: When the total online users reach the threshold (190 users), the backend automatically sends an email to alert the administrator.
+- **Server Load Alerts**: The backend continuously checks memory usage, Node heap pressure, and CPU load. When the Render server stays under heavy pressure for consecutive checks, it automatically emails the administrator without relying on a fixed online-user threshold.
 - **Graceful Reconnection**: Provides a fullscreen loading/reconnection overlay when the server sleeps or network disconnects, optimizing user experience.
 
 ## 🛠️ Tech Stack
 
-- **Frontend**: HTML5, CSS3, Vanilla JavaScript
+- **Frontend**: React 19, Vite, CSS3
+- **Frontend apps**:
+  - `frontend/board-app`: main board / topic lobby
+  - `frontend/chat-app`: chat room / threads / room-host controls
+  - `frontend/feature-app`: feature center / announcements / anonymous identity / sponsorship
+  - `frontend/shared`: shared anonymous identity helpers and common front-end utilities
 - **Backend**: Node.js, Express.js
 - **Real-time**: Socket.io
 - **Database**: MongoDB, Mongoose (Cloud hosted on MongoDB Atlas)
 - **Email Service**: Nodemailer
+
+## 🧱 Project Architecture
+
+This project can now be viewed in four layers:
+
+1. **React frontend layer**: Three independent frontends for the board lobby, chat room, and feature center.
+2. **Express routing layer**: Serves static assets, React builds, and version/meta endpoints.
+3. **Socket event layer**: Handles room creation, chat, threads, commands, and state sync.
+4. **Data & utility layer**: Handles models, room sorting, anonymous profiles, polls, and shared config.
+
+```mermaid
+flowchart TB
+  U[Browser] --> B["frontend/board-app"]
+  U --> C["frontend/chat-app"]
+  U --> F["frontend/feature-app"]
+  B --> SH["frontend/shared"]
+  C --> SH
+  F --> SH
+
+  B -->|HTTP / Socket.io| SV[server.js]
+  C -->|HTTP / Socket.io| SV
+  F -->|HTTP| SV
+
+  SV --> RH[sockets/room-handlers.js]
+  SV --> CH[sockets/chat-handlers.js]
+  SV --> TH[sockets/thread-handlers.js]
+  SV --> CMD[command-handler.js]
+
+  RH --> R[(models/Room.js)]
+  CH --> M[(models/Message.js)]
+  TH --> R
+  TH --> M
+
+  SV --> A[(models/Announcement.js)]
+  SV --> AP[(models/AnonymousProfile.js)]
+  SV --> RL[utils/room-list.js]
+  SV --> PLS[polls.js]
+  SV --> CFG[config.js]
+```
+
+### Module Responsibility Table
+
+| Module | Responsibility | Notes |
+|---|---|---|
+| [server.js](server.js) | Server entry | Starts Express / Socket.io, connects the database, and registers socket handlers |
+| [frontend/board-app](frontend/board-app) | Main board | Provides room creation, topic search, hot rooms, draggable whiteboard widgets, and custom modules |
+| [frontend/chat-app](frontend/chat-app) | Chat room | Provides room chat, replies, threads, polls, and room-host controls |
+| [frontend/feature-app](frontend/feature-app) | Feature center | Provides anonymous identity, command guides, embed guides, announcements, server status, and sponsorship info |
+| [frontend/shared](frontend/shared) | Shared frontend layer | Stores shared anonymous identity / anonymous key logic and common helpers |
+| [sockets/room-handlers.js](sockets/room-handlers.js) | Room management | Handles create/join/leave/password validation and room list updates |
+| [sockets/chat-handlers.js](sockets/chat-handlers.js) | Chat flow | Handles sending messages, typing, polls, and chat-related state sync |
+| [sockets/thread-handlers.js](sockets/thread-handlers.js) | Threads | Handles child thread creation, parent message markers, and thread links |
+| [commands/](commands) | Slash commands | Folder for management and interaction command implementations |
+| [command-handler.js](command-handler.js) | Command router | Parses `/xxx` input and dispatches to the correct command |
+| [models/Room.js](models/Room.js) | Room data | Stores room names, display names, passwords, creator identity, thread relations, and bans |
+| [models/Message.js](models/Message.js) | Message data | Stores chat content, replies, thread state, link previews, and timestamps |
+| [models/Announcement.js](models/Announcement.js) | Announcement data | Stores system announcements |
+| [models/AnonymousProfile.js](models/AnonymousProfile.js) | Anonymous identity data | Stores anonymous display names so the same anonymous key can be reused across devices |
+| [utils/room-list.js](utils/room-list.js) | Room list | Sorts rooms and formats online counts |
+| [polls.js](polls.js) | Poll engine | Manages poll data and vote calculation |
+| [config.js](config.js) | Shared config | Stores shared constants such as history message limits |
+
+### Architecture Notes
+
+- This project is no longer just a chat room; it now combines anonymous chat, a whiteboard-style topic lobby, and a dedicated feature center.
+- The main entry now lands on the React board lobby (`/react-board/`), while the chat room and feature center each have their own React routes.
+- The frontend handles rendering and interactions, while the backend handles state and data; chat rooms, rooms, and threads still sync in real time over Socket.io.
+- The current split is much easier to maintain because the main site, chat, feature center, rooms, threads, commands, and polls now have clearer module boundaries.
 
 ## 📝 Supported Markdown Formatting Commands
 

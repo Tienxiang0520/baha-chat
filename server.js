@@ -33,16 +33,41 @@ const server = http.createServer(app);
 const io = new Server(server);
 
 const VALID_USER_ID = /^[A-Za-z0-9]{8,10}$/;
+const EMAIL_ALERT_ENABLED = Boolean(process.env.EMAIL_USER && process.env.EMAIL_PASS);
+
+function readEnvNumber(name, fallback) {
+    const rawValue = process.env[name];
+    if (rawValue === undefined) return fallback;
+    const parsed = Number(rawValue);
+    return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+const SERVER_PRESSURE_THRESHOLDS = {
+    rssRatioAlert: readEnvNumber('SERVER_ALERT_RSS_RATIO', 0.8),
+    rssRatioRecover: readEnvNumber('SERVER_ALERT_RSS_RECOVER_RATIO', 0.68),
+    heapRatioAlert: readEnvNumber('SERVER_ALERT_HEAP_RATIO', 0.92),
+    heapRatioRecover: readEnvNumber('SERVER_ALERT_HEAP_RECOVER_RATIO', 0.82),
+    loadRatioAlert: readEnvNumber('SERVER_ALERT_LOAD_RATIO', 1.25),
+    loadRatioRecover: readEnvNumber('SERVER_ALERT_LOAD_RECOVER_RATIO', 0.85),
+    minimumHeapBytes: readEnvNumber('SERVER_ALERT_MIN_HEAP_BYTES', 256 * 1024 * 1024),
+    consecutiveBreaches: readEnvNumber('SERVER_ALERT_CONSECUTIVE', 2),
+    checkIntervalMs: readEnvNumber('SERVER_ALERT_INTERVAL_MS', 60 * 1000)
+};
 
 // 設定 Email 發送器 (需在 Render 設定環境變數 EMAIL_USER 和 EMAIL_PASS)
-const transporter = nodemailer.createTransport({
+const transporter = EMAIL_ALERT_ENABLED ? nodemailer.createTransport({
     service: 'gmail',
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS
     }
-});
-let hasSentUpgradeEmail = false; // 避免人數在 189~190 之間浮動時狂發 Email
+}) : null;
+
+const serverPressureState = {
+    alertActive: false,
+    consecutiveBreaches: 0,
+    lastAlertAt: 0
+};
 
 // 1. 連線到 MongoDB (環境變數 MONGODB_URI 是留給 Render 設定用的)
 async function connectDB() {
@@ -175,24 +200,160 @@ async function fetchLinkPreview(text) {
     return null;
 }
 
+function collectServerPressure(io) {
+    const memoryUsage = process.memoryUsage();
+    const totalMemory = os.totalmem() || 1;
+    const cpuCount = Math.max(os.cpus()?.length || 1, 1);
+    const loadAverage = os.loadavg();
+    const activeRoomCount = Array.from(io.sockets.adapter.rooms.keys())
+        .filter((roomName) => !io.sockets.sockets.has(roomName))
+        .length;
+    const rssRatio = memoryUsage.rss / totalMemory;
+    const heapRatio = memoryUsage.heapTotal > 0 ? memoryUsage.heapUsed / memoryUsage.heapTotal : 0;
+    const loadRatio = loadAverage[0] / cpuCount;
+
+    const breachReasons = [];
+    const recoverReasons = [];
+
+    if (rssRatio >= SERVER_PRESSURE_THRESHOLDS.rssRatioAlert) breachReasons.push('rss');
+    if (rssRatio < SERVER_PRESSURE_THRESHOLDS.rssRatioRecover) recoverReasons.push('rss');
+
+    const heapEligible = memoryUsage.heapUsed >= SERVER_PRESSURE_THRESHOLDS.minimumHeapBytes;
+    if (heapEligible && heapRatio >= SERVER_PRESSURE_THRESHOLDS.heapRatioAlert) breachReasons.push('heap');
+    if (!heapEligible || heapRatio < SERVER_PRESSURE_THRESHOLDS.heapRatioRecover) recoverReasons.push('heap');
+
+    if (loadRatio >= SERVER_PRESSURE_THRESHOLDS.loadRatioAlert) breachReasons.push('load');
+    if (loadRatio < SERVER_PRESSURE_THRESHOLDS.loadRatioRecover) recoverReasons.push('load');
+
+    return {
+        connectedUsers: io.engine.clientsCount,
+        roomCount: activeRoomCount,
+        loadAverage,
+        cpuCount,
+        loadRatio,
+        memoryUsage,
+        totalMemory,
+        rssRatio,
+        heapRatio,
+        breachReasons,
+        recoverReasons,
+        heapEligible,
+        timestamp: new Date().toISOString()
+    };
+}
+
+function bytesToMb(bytes) {
+    return Math.round(bytes / 1024 / 1024);
+}
+
+function formatPercent(value) {
+    return `${(value * 100).toFixed(1)}%`;
+}
+
+async function sendServerPressureAlert(snapshot, triggerSource) {
+    if (!EMAIL_ALERT_ENABLED || !transporter) return;
+
+    const subject = `Baha Render 負載警報：伺服器快撐不住了 (${snapshot.connectedUsers} 人在線)`;
+    const reasonLines = [];
+
+    if (snapshot.breachReasons.includes('rss')) {
+        reasonLines.push(`RSS 記憶體使用率過高：${formatPercent(snapshot.rssRatio)} / 觸發門檻 ${formatPercent(SERVER_PRESSURE_THRESHOLDS.rssRatioAlert)}`);
+    }
+    if (snapshot.breachReasons.includes('heap')) {
+        reasonLines.push(`Node heap 使用率過高：${formatPercent(snapshot.heapRatio)} / 觸發門檻 ${formatPercent(SERVER_PRESSURE_THRESHOLDS.heapRatioAlert)}`);
+    }
+    if (snapshot.breachReasons.includes('load')) {
+        reasonLines.push(`CPU load 過高：${snapshot.loadRatio.toFixed(2)} / 觸發門檻 ${SERVER_PRESSURE_THRESHOLDS.loadRatioAlert.toFixed(2)}`);
+    }
+
+    await transporter.sendMail({
+        from: process.env.EMAIL_USER,
+        to: process.env.EMAIL_USER,
+        subject,
+        text: [
+            'Baha 偵測到伺服器可能快撐不住了。',
+            '',
+            `觸發來源：${triggerSource}`,
+            `時間：${snapshot.timestamp}`,
+            `在線人數：${snapshot.connectedUsers}`,
+            `房間數：${snapshot.roomCount}`,
+            `RSS：${bytesToMb(snapshot.memoryUsage.rss)} MB / ${bytesToMb(snapshot.totalMemory)} MB (${formatPercent(snapshot.rssRatio)})`,
+            `Heap：${bytesToMb(snapshot.memoryUsage.heapUsed)} MB / ${bytesToMb(snapshot.memoryUsage.heapTotal)} MB (${formatPercent(snapshot.heapRatio)})`,
+            `Load avg (1m)：${snapshot.loadAverage[0].toFixed(2)}，CPU 核心數：${snapshot.cpuCount}，load ratio：${snapshot.loadRatio.toFixed(2)}`,
+            '',
+            '觸發原因：',
+            ...reasonLines.map((line) => `- ${line}`),
+            '',
+            '建議盡快查看 Render 後台的 CPU / 記憶體圖表與最近部署紀錄。'
+        ].join('\n')
+    });
+}
+
+async function checkServerPressure(io, triggerSource) {
+    const snapshot = collectServerPressure(io);
+    const hasPressure = snapshot.breachReasons.length > 0;
+
+    if (hasPressure) {
+        serverPressureState.consecutiveBreaches += 1;
+    } else {
+        serverPressureState.consecutiveBreaches = 0;
+    }
+
+    const shouldAlert = hasPressure
+        && !serverPressureState.alertActive
+        && serverPressureState.consecutiveBreaches >= SERVER_PRESSURE_THRESHOLDS.consecutiveBreaches;
+
+    if (shouldAlert) {
+        try {
+            await sendServerPressureAlert(snapshot, triggerSource);
+            serverPressureState.alertActive = true;
+            serverPressureState.lastAlertAt = Date.now();
+            log(`📨 已寄出伺服器負載警報 Email，原因：${snapshot.breachReasons.join(', ')}`);
+        } catch (mailError) {
+            error('寄送伺服器負載警報失敗:', mailError);
+        }
+    }
+
+    const isRecovered = snapshot.recoverReasons.length === 3;
+    if (serverPressureState.alertActive && isRecovered) {
+        serverPressureState.alertActive = false;
+        serverPressureState.consecutiveBreaches = 0;
+        log('🟢 伺服器負載已恢復正常，已重置 Email 警報狀態');
+    }
+
+    return {
+        ...snapshot,
+        alertActive: serverPressureState.alertActive,
+        consecutiveBreaches: serverPressureState.consecutiveBreaches,
+        lastAlertAt: serverPressureState.lastAlertAt
+    };
+}
+
 async function buildServerStatus(io) {
     const [roomCount, announcementCount] = await Promise.all([
         Room.countDocuments(),
         Announcement.countDocuments()
     ]);
 
-    const memoryUsage = process.memoryUsage();
+    const pressure = collectServerPressure(io);
     return {
         connectedUsers: io.engine.clientsCount,
         roomCount,
         announcementCount,
         uptimeSeconds: Math.floor(process.uptime()),
-        loadAverage: os.loadavg(),
+        loadAverage: pressure.loadAverage,
         memoryUsage: {
-            rss: memoryUsage.rss,
-            heapUsed: memoryUsage.heapUsed,
-            heapTotal: memoryUsage.heapTotal,
-            external: memoryUsage.external
+            rss: pressure.memoryUsage.rss,
+            heapUsed: pressure.memoryUsage.heapUsed,
+            heapTotal: pressure.memoryUsage.heapTotal,
+            external: pressure.memoryUsage.external
+        },
+        pressure: {
+            rssRatio: pressure.rssRatio,
+            heapRatio: pressure.heapRatio,
+            loadRatio: pressure.loadRatio,
+            alertActive: serverPressureState.alertActive,
+            reasons: pressure.breachReasons
         },
         platform: os.platform(),
         arch: os.arch(),
@@ -222,6 +383,7 @@ io.on('connection', async (socket) => {
 
     const currentTotalUsers = io.engine.clientsCount;
     log(`📡 [連線] 匿名使用者 ${userId} (ID: ${socket.id}) 已進入，當前總人數: ${currentTotalUsers}`);
+    void checkServerPressure(io, 'connection');
 
     // 當新使用者連線時，傳送目前所有可用房間列表
     socket.emit('room list', await getSortedRoomList(io));
@@ -314,11 +476,7 @@ io.on('connection', async (socket) => {
         // 使用者斷線後，房間人數會自動更新，我們需要廣播最新的列表
         // 使用 setTimeout 確保 adapter 的房間資訊已更新
         setTimeout(async () => io.emit('room list', await getSortedRoomList(io)), 100);
-
-        // 當人數降回 150 人以下時，重置 Email 發送狀態，以便下次再度達標時能重新提醒
-        if (currentTotalUsers < 150) {
-            hasSentUpgradeEmail = false;
-        }
+        void checkServerPressure(io, 'disconnect');
     });
 });
 
@@ -328,3 +486,9 @@ const PORT = process.env.PORT || 3000;
 server.listen(PORT, '0.0.0.0', () => {
     log(`Baha 匿名論壇伺服器已啟動， http://localhost:${PORT}`);
 });
+
+const serverPressureMonitor = setInterval(() => {
+    void checkServerPressure(io, 'interval');
+}, SERVER_PRESSURE_THRESHOLDS.checkIntervalMs);
+
+serverPressureMonitor.unref?.();
