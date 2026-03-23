@@ -44,6 +44,7 @@ export function useChatSocket() {
   const typingTimerRef = useRef(null);
   const typingMapRef = useRef(new Map());
   const currentRoomRef = useRef('');
+  const autoJoinInFlightRef = useRef(false);
 
   const [connected, setConnected] = useState(false);
   const [rooms, setRooms] = useState([]);
@@ -107,6 +108,21 @@ export function useChatSocket() {
 
   const requestRoomPassword = (displayName) =>
     window.prompt(`「${displayName || '此房間'}」已上鎖，請輸入密碼：`);
+
+  const attemptRoomJoinFromUrl = (options = {}) => {
+    const roomName = roomFromUrlRef.current;
+    const socket = socketRef.current;
+    if (!roomName || !socket?.connected) return false;
+    if (currentRoomRef.current === roomName) return false;
+    if (autoJoinInFlightRef.current && !options.force) return false;
+
+    autoJoinInFlightRef.current = true;
+    joinRoom(roomName, roomPasswordCacheRef.current.get(roomName) || null, {
+      roomDisplayName: roomName,
+      silent: true
+    });
+    return true;
+  };
 
   const joinRoom = (roomName, password = null, options = {}) => {
     if (!roomName || !socketRef.current) return;
@@ -240,15 +256,7 @@ export function useChatSocket() {
 
     socket.on('connect', () => {
       setConnected(true);
-      const roomFromUrl = roomFromUrlRef.current;
-      if (roomFromUrl) {
-        joinRoom(roomFromUrl, roomPasswordCacheRef.current.get(roomFromUrl) || null, {
-          roomDisplayName: roomFromUrl,
-          silent: true
-        });
-        roomFromUrlRef.current = '';
-        return;
-      }
+      if (attemptRoomJoinFromUrl({ force: true })) return;
       if (currentRoomRef.current) {
         const reconnectRoom = currentRoomRef.current;
         joinRoom(reconnectRoom, roomPasswordCacheRef.current.get(reconnectRoom) || null, {
@@ -267,6 +275,9 @@ export function useChatSocket() {
 
     socket.on('room list', (nextRooms) => {
       setRooms(Array.isArray(nextRooms) ? nextRooms : []);
+      if (!currentRoomRef.current) {
+        attemptRoomJoinFromUrl();
+      }
     });
 
     socket.on('room created', (payload) => {
@@ -295,6 +306,11 @@ export function useChatSocket() {
       setJoinError('');
       clearTypingState();
       syncRoomUrl(roomName);
+      autoJoinInFlightRef.current = false;
+
+      if (roomFromUrlRef.current === roomName) {
+        roomFromUrlRef.current = '';
+      }
 
       if (pendingJoin?.roomName === roomName && pendingJoin.password) {
         roomPasswordCacheRef.current.set(roomName, pendingJoin.password);
@@ -312,11 +328,15 @@ export function useChatSocket() {
     socket.on('join error', (errorKey) => {
       const pendingJoin = pendingJoinRef.current;
       if (errorKey === 'wrong_password' && pendingJoin?.roomName) {
+        autoJoinInFlightRef.current = false;
         const password = requestRoomPassword(pendingJoin.displayName);
         if (password === null) {
           pendingJoinRef.current = null;
           setJoinError('');
           setSystemNotice(`已取消加入 ${pendingJoin.displayName}`);
+          if (roomFromUrlRef.current === pendingJoin.roomName) {
+            roomFromUrlRef.current = '';
+          }
           return;
         }
         if (password.trim()) {
@@ -328,6 +348,10 @@ export function useChatSocket() {
           });
           return;
         }
+      }
+      autoJoinInFlightRef.current = false;
+      if (pendingJoin?.roomName && roomFromUrlRef.current === pendingJoin.roomName) {
+        roomFromUrlRef.current = '';
       }
       pendingJoinRef.current = null;
       setJoinError(errorKey || 'room_not_found');
@@ -416,6 +440,7 @@ export function useChatSocket() {
     socket.on('room deleted', (payload) => {
       if (payload?.room !== currentRoomRef.current) return;
       roomPasswordCacheRef.current.delete(payload.room);
+      autoJoinInFlightRef.current = false;
       resetCurrentRoomState('房間已被刪除。');
     });
 
@@ -428,6 +453,7 @@ export function useChatSocket() {
     socket.on('kicked', ({ room }) => {
       if (!room || room !== currentRoomRef.current) return;
       roomPasswordCacheRef.current.delete(room);
+      autoJoinInFlightRef.current = false;
       resetCurrentRoomState(`你已被踢出 ${room}`);
     });
 
